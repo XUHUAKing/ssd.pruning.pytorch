@@ -66,12 +66,14 @@ echo "Creating trainval35k dataset..."
 echo "Downloading trainval35k annotations from S3"
 curl -LO https://s3.amazonaws.com/amdegroot-datasets/instances_trainval35k.json.zip
 
-# combine train and val 
+# combine train and val
 echo "Combining train and val images"
 mkdir ../images/trainval35k
 cd ../images/train2014
+# copy all jpg from train2014 to trainval35k
 find -maxdepth 1 -name '*.jpg' -exec cp -t ../trainval35k {} + # dir too large for cp
 cd ../val2014
+# copy all jpg from val2014 to trainval35k
 find -maxdepth 1 -name '*.jpg' -exec cp -t ../trainval35k {} +
 
 

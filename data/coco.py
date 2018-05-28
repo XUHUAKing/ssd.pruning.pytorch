@@ -35,10 +35,10 @@ def get_label_map(label_file):
     labels = open(label_file, 'r')
     for line in labels:
         ids = line.split(',')
-        label_map[int(ids[0])] = int(ids[1])
+        label_map[int(ids[0])] = int(ids[1])#what label corresponds to what index for a class
     return label_map
 
-
+#take in target and transform it
 class COCOAnnotationTransform(object):
     """Transforms a COCO annotation into a Tensor of bbox coords and label index
     Initilized with a dictionary lookup of classnames to indexes
@@ -49,7 +49,7 @@ class COCOAnnotationTransform(object):
     def __call__(self, target, width, height):
         """
         Args:
-            target (dict): COCO target json annotation as a python dict
+            target (dict): COCO target json annotation as a python dict #"target" include info. about bounding box!!
             height (int): height
             width (int): width
         Returns:
@@ -109,6 +109,7 @@ class COCODetection(data.Dataset):
     def __len__(self):
         return len(self.ids)
 
+    # pull one training entity out, which contains image itself, target, h, w
     def pull_item(self, index):
         """
         Args:
@@ -131,7 +132,7 @@ class COCODetection(data.Dataset):
         if self.transform is not None:
             target = np.array(target)
             img, boxes, labels = self.transform(img, target[:, :4],
-                                                target[:, 4])
+                                                target[:, 4])#data augmentations
             # to rgb
             img = img[:, :, (2, 1, 0)]
 

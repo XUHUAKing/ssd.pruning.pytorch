@@ -168,7 +168,7 @@ class VOCDetection(data.Dataset):
         '''
         img_id = self.ids[index]
         anno = ET.parse(self._annopath % img_id).getroot()
-        gt = self.target_transform(anno, 1, 1)
+        gt = self.target_transform(anno, 1, 1) #target_transfrom will transform a target "anno" to [(label, bbox coords)]
         return img_id[1], gt
 
     def pull_tensor(self, index):
