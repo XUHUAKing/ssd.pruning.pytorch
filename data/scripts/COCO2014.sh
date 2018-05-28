@@ -1,5 +1,6 @@
-#!/bin/bash
+####DONE
 
+#!/bin/bash
 start=`date +%s`
 
 # handle optional download dir

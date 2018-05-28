@@ -38,7 +38,7 @@ def get_label_map(label_file):
         label_map[int(ids[0])] = int(ids[1])#what label corresponds to what index for a class
     return label_map
 
-#take in target and transform it
+#take in target and transform it into list of [bbox coords, label]
 class COCOAnnotationTransform(object):
     """Transforms a COCO annotation into a Tensor of bbox coords and label index
     Initilized with a dictionary lookup of classnames to indexes
@@ -57,13 +57,13 @@ class COCOAnnotationTransform(object):
         """
         scale = np.array([width, height, width, height])
         res = []
-        for obj in target:
+        for obj in target:# in COCO, target is in JSON
             if 'bbox' in obj:
                 bbox = obj['bbox']
-                bbox[2] += bbox[0]
-                bbox[3] += bbox[1]
+                bbox[2] += bbox[0]# bbox[0] is first x i.e. xmin, bbox[2] is width
+                bbox[3] += bbox[1]# bbox[1] is first y i.e. ymin, bbox[3] is height
                 label_idx = self.label_map[obj['category_id']] - 1
-                final_box = list(np.array(bbox)/scale)
+                final_box = list(np.array(bbox)/scale) #[xmin, ymin, xmax, ymax] up to now
                 final_box.append(label_idx)
                 res += [final_box]  # [xmin, ymin, xmax, ymax, label_idx]
             else:

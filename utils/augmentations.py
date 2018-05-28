@@ -49,7 +49,7 @@ class Compose(object):
 
     def __call__(self, img, boxes=None, labels=None):
         for t in self.transforms:
-            img, boxes, labels = t(img, boxes, labels)
+            img, boxes, labels = t(img, boxes, labels)#do particular type of transformation
         return img, boxes, labels
 
 
@@ -396,7 +396,7 @@ class PhotometricDistort(object):
         im, boxes, labels = distort(im, boxes, labels)
         return self.rand_light_noise(im, boxes, labels)
 
-
+#final one - integrate all above
 class SSDAugmentation(object):
     def __init__(self, size=300, mean=(104, 117, 123)):
         self.mean = mean

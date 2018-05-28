@@ -29,6 +29,7 @@ VOC_ROOT = osp.join(HOME, "data/VOCdevkit/")
 
 #function here will be imported in train.py file and executed directly
 
+#take in target and transform it into list of [bbox coords, label]
 class VOCAnnotationTransform(object):
     """Transforms a VOC annotation into a Tensor of bbox coords and label index
     Initilized with a dictionary lookup of classnames to indexes
@@ -40,11 +41,13 @@ class VOCAnnotationTransform(object):
             (default: False)
         height (int): height
         width (int): width
+    Returns:
+        a list containing lists of bounding boxes  [bbox coords, class idx]
     """
 
     def __init__(self, class_to_ind=None, keep_difficult=False):
         self.class_to_ind = class_to_ind or dict(
-            zip(VOC_CLASSES, range(len(VOC_CLASSES))))
+            zip(VOC_CLASSES, range(len(VOC_CLASSES))))# make own look up dict if None
         self.keep_difficult = keep_difficult
 
     def __call__(self, target, width, height):
@@ -56,7 +59,7 @@ class VOCAnnotationTransform(object):
             a list containing lists of bounding boxes  [bbox coords, class name]
         """
         res = []
-        for obj in target.iter('object'):
+        for obj in target.iter('object'):# in VOC, target is from xml tree
             difficult = int(obj.find('difficult').text) == 1
             if not self.keep_difficult and difficult:
                 continue
@@ -107,7 +110,7 @@ class VOCDetection(data.Dataset):
         self._annopath = osp.join('%s', 'Annotations', '%s.xml')
         self._imgpath = osp.join('%s', 'JPEGImages', '%s.jpg')
         self.ids = list()
-        for (year, name) in image_sets:
+        for (year, name) in image_sets:#2007/2012 ， trainval
             rootpath = osp.join(self.root, 'VOC' + year)
             for line in open(osp.join(rootpath, 'ImageSets', 'Main', name + '.txt')):
                 self.ids.append((rootpath, line.strip()))
