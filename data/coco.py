@@ -1,3 +1,4 @@
+######DONE
 from .config import HOME
 import os
 import os.path as osp
@@ -71,7 +72,8 @@ class COCOAnnotationTransform(object):
 
         return res  # [[xmin, ymin, xmax, ymax, label_idx], ... ]
 
-
+#inheritance of data.Dataset
+#For a dataset object, you should have functions to get an item/image for use (from a directory in "root")
 class COCODetection(data.Dataset):
     """`MS Coco Detection <http://mscoco.org/dataset/#detections-challenge2016>`_ Dataset.
     Args:

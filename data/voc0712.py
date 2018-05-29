@@ -1,3 +1,4 @@
+######DONE
 """VOC Dataset Classes
 
 Original author: Francisco Massa
@@ -80,7 +81,8 @@ class VOCAnnotationTransform(object):
 
         return res  # [[xmin, ymin, xmax, ymax, label_ind], ... ]
 
-
+#inheritance of data.Dataset
+#For a dataset object, you should have functions to get an item/image for use (from a directory in "root")
 class VOCDetection(data.Dataset):
     """VOC Detection Dataset Object
 
@@ -147,7 +149,7 @@ class VOCDetection(data.Dataset):
         '''Returns the original image object at index in PIL form
 
         Note: not using self.__getitem__(), as any transformations passed in
-        could mess up this functionality.
+        could mess up this functionality. i.e. Do NOT use inherited function
 
         Argument:
             index (int): index of img to show
@@ -171,7 +173,8 @@ class VOCDetection(data.Dataset):
         '''
         img_id = self.ids[index]
         anno = ET.parse(self._annopath % img_id).getroot()
-        gt = self.target_transform(anno, 1, 1) #target_transfrom will transform a target "anno" to [(label, bbox coords)]
+        #target_transfrom will transform a target "anno" to [(label, bbox coords)
+        gt = self.target_transform(anno, 1, 1)
         return img_id[1], gt
 
     def pull_tensor(self, index):
@@ -185,4 +188,5 @@ class VOCDetection(data.Dataset):
         Return:
             tensorized version of img, squeezed
         '''
+        #returns a new tensor with a dimension of size 1 inserted at the specified position
         return torch.Tensor(self.pull_image(index)).unsqueeze_(0)
