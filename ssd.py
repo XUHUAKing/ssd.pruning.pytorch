@@ -3,10 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from layers import *
-from data import voc, coco
+from data import voc, coco #from config.py
 import os
 
-
+# inherit nn.Module so it have .train()
 class SSD(nn.Module):
     """Single Shot Multibox Architecture
     The network is composed of a base VGG network followed by the
@@ -29,8 +29,9 @@ class SSD(nn.Module):
         super(SSD, self).__init__()
         self.phase = phase
         self.num_classes = num_classes
-        self.cfg = (coco, voc)[num_classes == 21]
+        self.cfg = (coco, voc)[num_classes == 21]#when num_classes==21, i.e. true/[1], then voc is chosen
         self.priorbox = PriorBox(self.cfg)
+        # just create an object above, but need to call forward() to return prior boxes coords
         self.priors = Variable(self.priorbox.forward(), volatile=True)
         self.size = size
 
@@ -40,8 +41,8 @@ class SSD(nn.Module):
         self.L2Norm = L2Norm(512, 20)
         self.extras = nn.ModuleList(extras)
 
-        self.loc = nn.ModuleList(head[0])
-        self.conf = nn.ModuleList(head[1])
+        self.loc = nn.ModuleList(head[0])#loc conv layer
+        self.conf = nn.ModuleList(head[1])#conf conv layer
 
         if phase == 'test':
             self.softmax = nn.Softmax(dim=-1)
@@ -62,17 +63,18 @@ class SSD(nn.Module):
 
             train:
                 list of concat outputs from:
+                    For each default box, predict both the shape offsets and the confidences for all object categories
                     1: confidence layers, Shape: [batch*num_priors,num_classes]
                     2: localization layers, Shape: [batch,num_priors*4]
-                    3: priorbox layers, Shape: [2,num_priors*4]
+                    3: priorbox layers, Shape: [2,num_priors*4] #variance???
         """
-        sources = list()
+        sources = list()# used for storing output of chosen layers, just concat them together
         loc = list()
         conf = list()
 
         # apply vgg up to conv4_3 relu
         for k in range(23):
-            x = self.vgg[k](x)
+            x = self.vgg[k](x)# use vgg[k] as a function because it is a layer
 
         s = self.L2Norm(x)
         sources.append(s)
@@ -90,8 +92,9 @@ class SSD(nn.Module):
 
         # apply multibox head to source layers
         for (x, l, c) in zip(sources, self.loc, self.conf):
-            loc.append(l(x).permute(0, 2, 3, 1).contiguous())
-            conf.append(c(x).permute(0, 2, 3, 1).contiguous())
+            # l and c is two conv layers
+            loc.append(l(x).permute(0, 2, 3, 1).contiguous()) # store the output of loc conv layer
+            conf.append(c(x).permute(0, 2, 3, 1).contiguous()) # store the output of conf conv layer
 
         loc = torch.cat([o.view(o.size(0), -1) for o in loc], 1)
         conf = torch.cat([o.view(o.size(0), -1) for o in conf], 1)
@@ -123,6 +126,7 @@ class SSD(nn.Module):
 
 # This function is derived from torchvision VGG make_layers()
 # https://github.com/pytorch/vision/blob/master/torchvision/models/vgg.py
+# cfg is a list of string
 def vgg(cfg, i, batch_norm=False):
     layers = []
     in_channels = i
@@ -139,7 +143,7 @@ def vgg(cfg, i, batch_norm=False):
                 layers += [conv2d, nn.ReLU(inplace=True)]
             in_channels = v
     pool5 = nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
-    conv6 = nn.Conv2d(512, 1024, kernel_size=3, padding=6, dilation=6)
+    conv6 = nn.Conv2d(512, 1024, kernel_size=3, padding=6, dilation=6)# fc6 and fc7 are changed to conv layers
     conv7 = nn.Conv2d(1024, 1024, kernel_size=1)
     layers += [pool5, conv6,
                nn.ReLU(inplace=True), conv7, nn.ReLU(inplace=True)]
@@ -162,12 +166,13 @@ def add_extras(cfg, i, batch_norm=False):
         in_channels = v
     return layers
 
-
+# this function will include above two functions for vgg base net and extra layers
 def multibox(vgg, extra_layers, cfg, num_classes):
     loc_layers = []
     conf_layers = []
     vgg_source = [21, -2]
     for k, v in enumerate(vgg_source):
+        # Conv2d (in_channels, out_channels, kernel_size, stride, padding)
         loc_layers += [nn.Conv2d(vgg[v].out_channels,
                                  cfg[k] * 4, kernel_size=3, padding=1)]
         conf_layers += [nn.Conv2d(vgg[v].out_channels,
@@ -179,7 +184,7 @@ def multibox(vgg, extra_layers, cfg, num_classes):
                                   * num_classes, kernel_size=3, padding=1)]
     return vgg, extra_layers, (loc_layers, conf_layers)
 
-
+# this is the dict based on which to build the vgg and extras layers one by one
 base = {
     '300': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'C', 512, 512, 512, 'M',
             512, 512, 512],
@@ -203,6 +208,7 @@ def build_ssd(phase, size=300, num_classes=21):
         print("ERROR: You specified size " + repr(size) + ". However, " +
               "currently only SSD300 (size=300) is supported!")
         return
+    # str(size) will change 300 to '300'
     base_, extras_, head_ = multibox(vgg(base[str(size)], 3),
                                      add_extras(extras[str(size)], 1024),
                                      mbox[str(size)], num_classes)

@@ -10,7 +10,7 @@ class PriorBox(object):
     """Compute priorbox coordinates in center-offset form for each source
     feature map.
     """
-    def __init__(self, cfg):
+    def __init__(self, cfg):#cfg is the configuration of coco/voc
         super(PriorBox, self).__init__()
         self.image_size = cfg['min_dim']
         # number of priors for feature map location (either 4 or 6)
