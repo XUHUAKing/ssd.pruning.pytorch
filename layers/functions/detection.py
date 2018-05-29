@@ -34,22 +34,25 @@ class Detect(Function):
         num = loc_data.size(0)  # batch size
         num_priors = prior_data.size(0)
         output = torch.zeros(num, self.num_classes, self.top_k, 5)
+        # for each sample, every prior box will have #num_classes conf. scores for it
         conf_preds = conf_data.view(num, num_priors,
                                     self.num_classes).transpose(2, 1)
-
         # Decode predictions into bboxes.
         for i in range(num):
             decoded_boxes = decode(loc_data[i], prior_data, self.variance)
-            # For each class, perform nms
+            # For each class, perform nms to get bbox for this class
             conf_scores = conf_preds[i].clone()
 
             for cl in range(1, self.num_classes):
-                c_mask = conf_scores[cl].gt(self.conf_thresh)
-                scores = conf_scores[cl][c_mask]
+                c_mask = conf_scores[cl].gt(self.conf_thresh) # greater than threshold
+                scores = conf_scores[cl][c_mask]# scores are those higher than threshold
                 if scores.dim() == 0:
+                # if means for this class, no object of this class exists in this image, because the scores for this class are lower than threshold
                     continue
                 l_mask = c_mask.unsqueeze(1).expand_as(decoded_boxes)
+                #step 1. remaining boxes for reasonable classes's objects
                 boxes = decoded_boxes[l_mask].view(-1, 4)
+                #step 2. use NMS to remove redundant boxes bounding the same class's object
                 # idx of highest scoring and non-overlapping boxes per class
                 ids, count = nms(boxes, scores, self.nms_thresh, self.top_k)
                 output[i, cl, :count] = \
@@ -59,4 +62,4 @@ class Detect(Function):
         _, idx = flt[:, :, 0].sort(1, descending=True)
         _, rank = idx.sort(1)
         flt[(rank < self.top_k).unsqueeze(-1).expand_as(flt)].fill_(0)
-        return output
+        return output # why not flt??
