@@ -1,3 +1,4 @@
+###DONE
 import torch
 from torchvision import transforms
 import cv2
@@ -5,7 +6,7 @@ import numpy as np
 import types
 from numpy import random
 
-
+#calculate the intersected area between two boxes
 def intersect(box_a, box_b):
     max_xy = np.minimum(box_a[:, 2:], box_b[2:])
     min_xy = np.maximum(box_a[:, :2], box_b[:2])
@@ -14,7 +15,7 @@ def intersect(box_a, box_b):
 
 
 def jaccard_numpy(box_a, box_b):
-    """Compute the jaccard overlap of two sets of boxes.  The jaccard overlap
+    """Compute the jaccard overlap of two sets of boxes (1 with many).  The jaccard overlap
     is simply the intersection over union of two boxes.
     E.g.:
         A ∩ B / A ∪ B = A ∩ B / (area(A) + area(B) - A ∩ B)
@@ -45,7 +46,7 @@ class Compose(object):
     """
 
     def __init__(self, transforms):
-        self.transforms = transforms
+        self.transforms = transforms # this is the args
 
     def __call__(self, img, boxes=None, labels=None):
         for t in self.transforms:
@@ -82,6 +83,7 @@ class SubtractMeans(object):
 class ToAbsoluteCoords(object):
     def __call__(self, image, boxes=None, labels=None):
         height, width, channels = image.shape
+        #unscale it back and represent as int
         boxes[:, 0] *= width
         boxes[:, 2] *= width
         boxes[:, 1] *= height
@@ -93,6 +95,7 @@ class ToAbsoluteCoords(object):
 class ToPercentCoords(object):
     def __call__(self, image, boxes=None, labels=None):
         height, width, channels = image.shape
+        #scale it and represent as %
         boxes[:, 0] /= width
         boxes[:, 2] /= width
         boxes[:, 1] /= height
@@ -414,4 +417,4 @@ class SSDAugmentation(object):
         ])
 
     def __call__(self, img, boxes, labels):
-        return self.augment(img, boxes, labels)
+        return self.augment(img, boxes, labels) # do transformation one by one
