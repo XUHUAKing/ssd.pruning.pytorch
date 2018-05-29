@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+#######DONE
+# -*- coding: utf-8 -*-@
 import torch
 
 
@@ -36,6 +37,7 @@ def intersect(box_a, box_b):
       box_b: (tensor) bounding boxes, Shape: [B,4].
     Return:
       (tensor) intersection area, Shape: [A,B].
+      inter[i, j] = intersection area between i_th box and j_th box, where i in A, j in B
     """
     A = box_a.size(0)
     B = box_b.size(0)
@@ -73,7 +75,7 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
     overlap, encode the bounding boxes, then return the matched indices
     corresponding to both confidence and location preds.
     Args:
-        threshold: (float) The overlap threshold used when mathing boxes.
+        threshold: (float) The overlap threshold used when matching boxes.
         truths: (tensor) Ground truth boxes, Shape: [num_obj, num_priors].
         priors: (tensor) Prior boxes from priorbox layers, Shape: [n_priors,4].
         variances: (tensor) Variances corresponding to each prior coord,
@@ -91,6 +93,7 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
         point_form(priors)
     )
     # (Bipartite Matching)
+    # prior means default boxes, num_priors means how many prior boxes in total
     # [1,num_objects] best prior for each ground truth
     best_prior_overlap, best_prior_idx = overlaps.max(1, keepdim=True)
     # [1,num_priors] best ground truth for each prior
@@ -108,7 +111,7 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
     conf = labels[best_truth_idx] + 1         # Shape: [num_priors]
     conf[best_truth_overlap < threshold] = 0  # label as background
     loc = encode(matches, priors, variances)
-    loc_t[idx] = loc    # [num_priors,4] encoded offsets to learn
+    loc_t[idx] = loc    # [num_priors,4] encoded offsets for every default box to learn
     conf_t[idx] = conf  # [num_priors] top class label for each prior
 
 
