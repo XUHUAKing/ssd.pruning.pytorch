@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from layers import *
+from models import *
 from data import voc, coco #from config.py
 import os
 
@@ -20,7 +21,7 @@ class SSD(nn.Module):
     Args:
         phase: (string) Can be "test" or "train"
         size: input image size
-        base: VGG16 layers for input, size of either 300 or 500
+        base: Resnet50 layers for input
         extras: extra layers that feed to multibox loc and conf layers
         head: "multibox head" consists of loc and conf conv layers
     """
@@ -36,7 +37,8 @@ class SSD(nn.Module):
         self.size = size
 
         # SSD network
-        self.vgg = nn.ModuleList(base)
+        #self.vgg = nn.ModuleList(base)
+        self.resnet = nn.ModuleList(base)# ModuleList allows a list of nn.Module
         # Layer learns to scale the l2 normalized features from conv4_3
         self.L2Norm = L2Norm(512, 20)
         self.extras = nn.ModuleList(extras)
@@ -76,7 +78,7 @@ class SSD(nn.Module):
         for k in range(23):
             x = self.vgg[k](x)# use vgg[k] as a function because it is a layer
 
-        s = self.L2Norm(x)#just a kind of normalization
+        s = self.L2Norm(x)
         sources.append(s)
 
         # apply vgg up to fc7
@@ -124,30 +126,12 @@ class SSD(nn.Module):
             print('Sorry only .pth and .pkl files supported.')
 
 
-# This function is derived from torchvision VGG make_layers()
+# This function is derived from torchvision ResNet
 # https://github.com/pytorch/vision/blob/master/torchvision/models/vgg.py
 # cfg is a list of string
-def vgg(cfg, i, batch_norm=False):
-    layers = []
-    in_channels = i
-    for v in cfg:
-        if v == 'M':
-            layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
-        elif v == 'C':
-            layers += [nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=True)]
-        else:
-            conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
-            if batch_norm:
-                layers += [conv2d, nn.BatchNorm2d(v), nn.ReLU(inplace=True)]
-            else:
-                layers += [conv2d, nn.ReLU(inplace=True)]
-            in_channels = v
-    pool5 = nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
-    conv6 = nn.Conv2d(512, 1024, kernel_size=3, padding=6, dilation=6)# fc6 and fc7 are changed to conv layers
-    conv7 = nn.Conv2d(1024, 1024, kernel_size=1)
-    layers += [pool5, conv6,
-               nn.ReLU(inplace=True), conv7, nn.ReLU(inplace=True)]
-    return layers
+def resnet():
+    model = resnet50(pretrained=True)
+    return model.resnet_layers()
 
 
 def add_extras(cfg, i, batch_norm=False):
@@ -167,29 +151,24 @@ def add_extras(cfg, i, batch_norm=False):
     return layers
 
 # this function will include above two functions for vgg base net and extra layers
-def multibox(vgg, extra_layers, cfg, num_classes):
+def multibox(resnet, extra_layers, cfg, num_classes):
     loc_layers = []
     conf_layers = []
-    vgg_source = [21, -2]# the output want to get from vgg
-    for k, v in enumerate(vgg_source):
+    resnet_source = [21, -2]#pending
+    for k, v in enumerate(resnet_source):
         # Conv2d (in_channels, out_channels, kernel_size, stride, padding)
-        loc_layers += [nn.Conv2d(vgg[v].out_channels,
+        loc_layers += [nn.Conv2d(resnet[v].out_channels,
                                  cfg[k] * 4, kernel_size=3, padding=1)]
-        conf_layers += [nn.Conv2d(vgg[v].out_channels,
+        conf_layers += [nn.Conv2d(resnet[v].out_channels,
                         cfg[k] * num_classes, kernel_size=3, padding=1)]
     for k, v in enumerate(extra_layers[1::2], 2):
         loc_layers += [nn.Conv2d(v.out_channels, cfg[k]
                                  * 4, kernel_size=3, padding=1)]
         conf_layers += [nn.Conv2d(v.out_channels, cfg[k]
                                   * num_classes, kernel_size=3, padding=1)]
-    return vgg, extra_layers, (loc_layers, conf_layers)
+    return resnet, extra_layers, (loc_layers, conf_layers)
 
-# this is the dict based on which to build the vgg and extras layers one by one
-base = {
-    '300': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'C', 512, 512, 512, 'M',
-            512, 512, 512],
-    '512': [],
-}
+# this is the dict based on which to build the extras layers one by one
 extras = {
     '300': [256, 'S', 512, 128, 'S', 256, 128, 256, 128, 256],
     '512': [],
@@ -200,7 +179,7 @@ mbox = {
 }
 
 
-def build_ssd(phase, size=300, num_classes=21):
+def build_ssd_resnet(phase, size=300, num_classes=21):
     if phase != "test" and phase != "train":
         print("ERROR: Phase: " + phase + " not recognized")
         return
@@ -209,7 +188,7 @@ def build_ssd(phase, size=300, num_classes=21):
               "currently only SSD300 (size=300) is supported!")
         return
     # str(size) will change 300 to '300'
-    base_, extras_, head_ = multibox(vgg(base[str(size)], 3),
+    base_, extras_, head_ = multibox(resnet(),
                                      add_extras(extras[str(size)], 1024),
                                      mbox[str(size)], num_classes)
     return SSD(phase, size, base_, extras_, head_, num_classes)
