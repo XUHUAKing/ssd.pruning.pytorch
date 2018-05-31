@@ -31,6 +31,8 @@ VOC_ROOT = osp.join(HOME, "data/VOCdevkit/")
 #function here will be imported in train.py file and executed directly
 
 #take in target and transform it into list of [bbox coords, label]
+#this function is an example of "target_transform" function, take in ElementTree-type "target" transformed from xml
+#and extract useful annotation information from this "target" object 
 class VOCAnnotationTransform(object):
     """Transforms a VOC annotation into a Tensor of bbox coords and label index
     Initilized with a dictionary lookup of classnames to indexes
