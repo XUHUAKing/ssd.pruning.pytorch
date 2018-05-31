@@ -1,7 +1,7 @@
 from data import *
 from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
-from ssd import build_ssd
+from ssd-resnet50 import build_ssd_resnet
 import os
 import sys
 import time
@@ -93,7 +93,7 @@ def train():
         import visdom
         viz = visdom.Visdom()
 
-    ssd_net = build_ssd('train', cfg['min_dim'], cfg['num_classes'])
+    ssd_net = build_ssd_resnet('train', cfg['min_dim'], cfg['num_classes'])
     net = ssd_net
 
     if args.cuda:
@@ -104,9 +104,10 @@ def train():
         print('Resuming training, loading {}...'.format(args.resume))
         ssd_net.load_weights(args.resume)
     else:
-        vgg_weights = torch.load(args.save_folder + args.basenet)
+        #vgg_weights = torch.load(args.save_folder + args.basenet)
         print('Loading base network...')
-        ssd_net.vgg.load_state_dict(vgg_weights)
+        ssd_net.resnet.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
+        #ssd_net.vgg.load_state_dict(vgg_weights)
 
     if args.cuda:
         net = net.cuda()
@@ -195,7 +196,7 @@ def train():
         if iteration != 0 and iteration % 5000 == 0:
             print('Saving state, iter:', iteration)
             #whatever dataset you use, the name is COCO
-            torch.save(ssd_net.state_dict(), 'weights/ssd300_COCO_' +
+            torch.save(ssd_net.state_dict(), 'weights/ssd300_VOC_' +
                        repr(iteration) + '.pth')
     torch.save(ssd_net.state_dict(),
                args.save_folder + '' + args.dataset + '.pth')

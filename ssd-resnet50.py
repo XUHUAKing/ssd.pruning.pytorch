@@ -8,6 +8,7 @@ from data import voc, coco #from config.py
 import os
 
 # inherit nn.Module so it have .train()
+# nn.Module has load_state_dict() function
 class SSD(nn.Module):
     """Single Shot Multibox Architecture
     The network is composed of a base VGG network followed by the
@@ -38,7 +39,7 @@ class SSD(nn.Module):
 
         # SSD network
         #self.vgg = nn.ModuleList(base)
-        self.resnet = nn.ModuleList(base)# ModuleList allows a list of nn.Module
+        self.resnet = nn.ModuleList(base)# ModuleList allows a list of nn.Module so that you can get it by index one by one
         # Layer learns to scale the l2 normalized features from conv4_3
         self.L2Norm = L2Norm(512, 20)
         self.extras = nn.ModuleList(extras)
@@ -74,16 +75,17 @@ class SSD(nn.Module):
         loc = list()
         conf = list()
 
-        # apply vgg up to conv4_3 relu
-        for k in range(23):
-            x = self.vgg[k](x)# use vgg[k] as a function because it is a layer
+        # apply resnet up to the last bottlneck module in stage 2
+        for k in range(11):
+            x = self.resnet[k](x)# use resnet[k] as a function because it is a module
 
         s = self.L2Norm(x)
         sources.append(s)
 
-        # apply vgg up to fc7
-        for k in range(23, len(self.vgg)):
-            x = self.vgg[k](x)
+        # apply resnet up to the last module avg pool, right before the fc1000
+        # minus 1 to exclude fc1000 layer
+        for k in range(21, len(self.resnet)-1):
+            x = self.resnet[k](x)
         sources.append(x)
 
         # apply extra layers and cache source layer outputs
@@ -115,6 +117,7 @@ class SSD(nn.Module):
             )
         return output
 
+    # used for loading weights for the WHOLE SSD network (i.e. including base net), record is stored in .pth or .pkl file
     def load_weights(self, base_file):
         other, ext = os.path.splitext(base_file)
         if ext == '.pkl' or '.pth':

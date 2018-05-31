@@ -4,6 +4,7 @@ from torch.autograd import Function
 from torch.autograd import Variable
 import torch.nn.init as init
 
+#  a kind of normalization, not calculating the loss
 class L2Norm(nn.Module):
     def __init__(self,n_channels, scale):
         super(L2Norm,self).__init__()

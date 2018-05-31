@@ -84,9 +84,9 @@ class Bottleneck(nn.Module):
         out = self.conv3(out)
         out = self.bn3(out)
 
+        # when downsample, the residual part x also need to downsample to match the size
         if self.downsample is not None:
             residual = self.downsample(x)
-
         out += residual
         out = self.relu(out)
 
@@ -126,7 +126,9 @@ class ResNet(nn.Module):
                 nn.BatchNorm2d(planes * block.expansion),
             )
 
-        layers = []
+        # only if in this stage you need to downsample, then downsample layer will handle the stride
+        # other two layers keep same
+        layers = [] # this list storing the nn.module of one block! Not a nn.layer
         layers.append(block(self.inplanes, planes, stride, downsample))
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
@@ -140,6 +142,8 @@ class ResNet(nn.Module):
         x = self.relu(x)
         x = self.maxpool(x)
 
+        # you can model(x) where model is a nn.Sequential type
+        # to go through all layers(modules) inside one by one
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
@@ -158,12 +162,13 @@ class ResNet(nn.Module):
         """
         layers = []
         layers += [self.conv1, self.bn1, self.relu, self.maxpool]
-        layers += self.layer1.children() # return a list containing all elements inside nn.Sequential
-        layers += self.layer2.children()
-        layers += self.layer3.children()
-        layers += self.layer4.children()
+        #every layer_i is a module named block
+        layers += self.layer1.children() # return a list containing all blocks inside nn.Sequential - 3
+        layers += self.layer2.children() # 4
+        layers += self.layer3.children() # 6
+        layers += self.layer4.children() # 3
         layers += [self.avgpool, self.fc]
-        return layers
+        return layers # a list of modules because a layer or a block is also a module
 
 
 def resnet18(pretrained=False, **kwargs):
@@ -198,6 +203,7 @@ def resnet50(pretrained=False, **kwargs):
     """
     model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
     if pretrained:
+        # load_url will load the state_dict type 
         model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
     return model
 
