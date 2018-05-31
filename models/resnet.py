@@ -155,7 +155,7 @@ class ResNet(nn.Module):
 
         return x
 
-    def resnet_layers():
+    def resnet_layers(self):
         """
         Return:
         a list of layers for SSD
@@ -203,7 +203,7 @@ def resnet50(pretrained=False, **kwargs):
     """
     model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
     if pretrained:
-        # load_url will load the state_dict type 
+        # load_url will load the state_dict type
         model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
     return model
 
