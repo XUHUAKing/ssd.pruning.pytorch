@@ -84,7 +84,7 @@ class SSD(nn.Module):
 
         # apply resnet up to the last module avg pool, right before the fc1000
         # minus 1 to exclude fc1000 layer
-        for k in range(21, len(self.resnet)-1):
+        for k in range(11, len(self.resnet)-1):
             x = self.resnet[k](x)
         sources.append(x)
 
