@@ -113,15 +113,15 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=1)# change to 1 for detection task
         #self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
-        self.avgpool = nn.AvgPool2d(7, stride=1)
+        self.avgpool = nn.AvgPool2d(7, padding = 3, count_include_pad = False, stride=1) #avoid halfing the size in avg pool for detection task
         self.fc = nn.Linear(512 * block.expansion, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')# this is for pytorch 0.4.0
+                nn.init.kaiming_normal(m.weight, mode='fan_out')# this is for pytorch 0.3.0
             elif isinstance(m, nn.BatchNorm2d):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
+                nn.init.constant(m.weight, 1)
+                nn.init.constant(m.bias, 0)
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None

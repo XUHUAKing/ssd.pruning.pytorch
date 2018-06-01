@@ -192,6 +192,6 @@ def build_ssd_resnet(phase, size=300, num_classes=21):
         return
     # str(size) will change 300 to '300'
     base_, extras_, head_ = multibox(resnet(),
-                                     add_extras(extras[str(size)], 1024),
+                                     add_extras(extras[str(size)], 2048),
                                      mbox[str(size)], num_classes)
     return SSD(phase, size, base_, extras_, head_, num_classes)
