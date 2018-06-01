@@ -106,7 +106,7 @@ def train():
     else:
         #vgg_weights = torch.load(args.save_folder + args.basenet)
         print('Loading base network...')
-        ssd_net.resnet.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
+        ssd_net.resnet.load_state_dict(torch.load('resnet50-19c8e357.pth'))#(model_zoo.load_url(model_urls['resnet50']))
         #ssd_net.vgg.load_state_dict(vgg_weights)
 
     if args.cuda:

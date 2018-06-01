@@ -1,6 +1,9 @@
 import torch.nn as nn
 import math
 import torch.utils.model_zoo as model_zoo
+import warnings
+import random
+import torch
 
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
@@ -113,8 +116,7 @@ class ResNet(nn.Module):
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-                #nn.init.xavier_normal_(m.weight, gain=1)
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')# this is for pytorch 0.4.0
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
@@ -206,7 +208,8 @@ def resnet50(pretrained=False, **kwargs):
     model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
     if pretrained:
         # load_url will load the state_dict type
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
+        model.load_state_dict(torch.load('resnet50-19c8e357.pth'))#(model_zoo.load_url(model_urls['resnet50']))
+        #model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
     return model
 
 
