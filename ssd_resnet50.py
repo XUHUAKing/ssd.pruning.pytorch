@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from layers import *
-from models import *
+from resnet import *
 from data import voc, coco #from config.py
 import os
 
