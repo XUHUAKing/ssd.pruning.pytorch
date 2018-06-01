@@ -157,12 +157,12 @@ def add_extras(cfg, i, batch_norm=False):
 def multibox(resnet, extra_layers, cfg, num_classes):
     loc_layers = []
     conf_layers = []
-    resnet_source = [21, -2]#pending
+    resnet_source = [10, -3]#pending
     for k, v in enumerate(resnet_source):
         # Conv2d (in_channels, out_channels, kernel_size, stride, padding)
-        loc_layers += [nn.Conv2d(resnet[v].out_channels,
+        loc_layers += [nn.Conv2d(resnet[v].out_channels(),
                                  cfg[k] * 4, kernel_size=3, padding=1)]
-        conf_layers += [nn.Conv2d(resnet[v].out_channels,
+        conf_layers += [nn.Conv2d(resnet[v].out_channels(),
                         cfg[k] * num_classes, kernel_size=3, padding=1)]
     for k, v in enumerate(extra_layers[1::2], 2):
         loc_layers += [nn.Conv2d(v.out_channels, cfg[k]

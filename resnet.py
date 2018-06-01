@@ -95,6 +95,8 @@ class Bottleneck(nn.Module):
 
         return out
 
+    def out_channels(self):
+        return self.conv3.out_channels
 
 class ResNet(nn.Module):
     def __init__(self, block, layers, num_classes=1000):
