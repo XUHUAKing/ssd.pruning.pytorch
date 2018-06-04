@@ -9,7 +9,8 @@ import torchvision.transforms as transforms
 import cv2
 import numpy as np
 
-COCO_ROOT = osp.join(HOME, 'data/coco/')
+#COCO_ROOT = osp.join(HOME, 'data/coco/')
+COCO_ROOT = '/cephfs/share/data/coco_xy/'
 IMAGES = 'images'
 ANNOTATIONS = 'annotations'
 COCO_API = 'PythonAPI'
@@ -85,13 +86,14 @@ class COCODetection(data.Dataset):
         in the target (bbox) and transforms it.
     """
 
-    def __init__(self, root, image_set='trainval35k', transform=None,
+#    def __init__(self, root, image_set='trainval35k', transform=None,
+    def __init__(self, root, image_set='train2014', transform=None,
                  target_transform=COCOAnnotationTransform(), dataset_name='MS COCO'):
         sys.path.append(osp.join(root, COCO_API))
         from pycocotools.coco import COCO
-        self.root = osp.join(root, IMAGES, image_set)
+        self.root = osp.join(root, IMAGES, image_set)# get images
         self.coco = COCO(osp.join(root, ANNOTATIONS,
-                                  INSTANCES_SET.format(image_set)))
+                                  INSTANCES_SET.format(image_set)))# get annotations
         self.ids = list(self.coco.imgToAnns.keys())
         self.transform = transform
         self.target_transform = target_transform
