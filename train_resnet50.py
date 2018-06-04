@@ -152,6 +152,13 @@ def train():
     # create batch iterator
     batch_iterator = iter(data_loader)
     for iteration in range(args.start_iter, cfg['max_iter']):
+        # load train data
+        try:
+            images, targets = next(batch_iterator)
+        except StopIteration:
+            batch_iterator = iter(data_loader)# the dataloader cannot re-initilize
+            images, targets = next(batch_iterator)
+
         if args.visdom and iteration != 0 and (iteration % epoch_size == 0):
             update_vis_plot(epoch, loc_loss, conf_loss, epoch_plot, None,
                             'append', epoch_size)
@@ -163,9 +170,6 @@ def train():
         if iteration in cfg['lr_steps']:
             step_index += 1
             adjust_learning_rate(optimizer, args.gamma, step_index)
-
-        # load train data
-        images, targets = next(batch_iterator)
 
         if args.cuda:
             images = Variable(images.cuda())
