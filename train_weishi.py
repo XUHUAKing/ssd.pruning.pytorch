@@ -1,5 +1,5 @@
 from data import *
-from data.inputdata import WeishiDetection
+from data.weishi import WeishiDetection
 from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
 from ssd import build_ssd
@@ -16,7 +16,7 @@ import torch.utils.data as data
 import numpy as np
 import argparse
 
-#os.environ['CUDA_VISIBLE_DEVICES'] = '7'
+#os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
@@ -177,9 +177,6 @@ def train():
         if iteration in cfg['lr_steps']:
             step_index += 1
             adjust_learning_rate(optimizer, args.gamma, step_index)
-
-        # load train data
-        images, targets = next(batch_iterator)
 
         if args.cuda:
             images = Variable(images.cuda())

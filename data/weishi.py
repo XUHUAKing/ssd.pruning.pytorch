@@ -1,4 +1,4 @@
-"""VOC Dataset Classes
+"""WEISHI Dataset Classes
 
 Original author: Francisco Massa
 https://github.com/fmassa/vision/blob/voc_dataset/torchvision/datasets/voc.py
@@ -27,8 +27,8 @@ VOC_CLASSES = (  # always index 0
 
 print(type(VOC_CLASSES))
 '''
-class VOCWeishiAnnotationTransform(object):
-    """Transforms a VOC annotation into a Tensor of bbox coords and label index
+class WeishiAnnotationTransform(object):
+    """Transforms a Weishi annotation into a Tensor of bbox coords and label index
     Initilized with a dictionary lookup of classnames to indexes
 
     Arguments:
@@ -46,7 +46,7 @@ class VOCWeishiAnnotationTransform(object):
         for line in fin.readlines():
             line = line.strip()
             VOC_CLASSES.append(line)
-        fin.close() 
+        fin.close()
         VOC_CLASSES = tuple(VOC_CLASSES)
         self.class_to_ind = class_to_ind or dict(
             zip(VOC_CLASSES, range(len(VOC_CLASSES))))
@@ -56,7 +56,8 @@ class VOCWeishiAnnotationTransform(object):
         """
         Arguments:
             target (annotation) : the target annotation to be made usable
-                will be an ET.Element
+                will be an ET.Element.
+            target has been ET.Element type already when being passed inside
         Returns:
             a list containing lists of bounding boxes  [bbox coords, class name]
         """
@@ -84,32 +85,31 @@ class VOCWeishiAnnotationTransform(object):
 
 
 class WeishiDetection(data.Dataset):
-    """VOC Detection Dataset Object
+    """Weishi Detection Dataset Object
 
     input is image, target is annotation
 
     Arguments:
-        root (string): filepath to VOCdevkit folder.
-        image_set (string): imageset to use (eg. 'train', 'val', 'test')
         transform (callable, optional): transformation to perform on the
             input image
         target_transform (callable, optional): transformation to perform on the
             target `annotation`
             (eg: take in caption string, return tensor of word indices)
+        _annopath: path for a specific annotation, extract from .txt file later
+        _imgpath: path for a specific image, extract from .txt file later
         dataset_name (string, optional): which dataset to load
             (default: 'VOC2007')
     """
 
     def __init__(self, image_xml_path="input (jpg, xml) file lists", label_file_path = "",
                  transform=None):
-        target_transform=VOCWeishiAnnotationTransform(label_file_path)
+        target_transform=WeishiAnnotationTransform(label_file_path)
         self.transform = transform
         self.target_transform = target_transform
         self._annopath = {}
         self._imgpath = {}
         self.name = "weishi"
         fin = open(image_xml_path, "r")
-        print("....................h")
         count = 0
         for line in fin.readlines():
             line = line.strip()
@@ -117,34 +117,27 @@ class WeishiDetection(data.Dataset):
             self._annopath[count] = des[1]
             self._imgpath[count] = des[0]
             count = count + 1
-        fin.close() 
+        fin.close()
 
     def __getitem__(self, index):
-        print(index)
-        print("nnn")
         im, gt, h, w = self.pull_item(index)
-
         return im, gt
 
     def __len__(self):
         return len(self._imgpath)
 
     def pull_item(self, index):
-        print(index)
-        print(len(self._imgpath))
-        print("bbbbbbbbbbbbb")
-        print(len(self._annopath))
-        print("000000000000000")
         target = ET.parse(self._annopath[index]).getroot()
         img = cv2.imread(self._imgpath[index])
         height, width, channels = img.shape
 
         if self.target_transform is not None:
             target = self.target_transform(target, width, height)
+            print("index: ", index, "target before: ", target)
 
         if self.transform is not None:
             target = np.array(target)
-            print(target.shape)
+            print("index: ", index, "target after: ", target)
             img, boxes, labels = self.transform(img, target[:, :4], target[:, 4])
             # to rgb
             img = img[:, :, (2, 1, 0)]
