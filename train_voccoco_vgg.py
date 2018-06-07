@@ -1,8 +1,7 @@
 from data import *
-from data.weishi import WeishiDetection
 from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
-from ssd import build_ssd
+from ssd_vgg import build_ssd_vgg
 import os
 import sys
 import time
@@ -25,14 +24,10 @@ def str2bool(v):
 parser = argparse.ArgumentParser(
     description='Single Shot MultiBox Detector Training With Pytorch')
 train_set = parser.add_mutually_exclusive_group()
-parser.add_argument('--dataset', default='VOC', choices=['VOC', 'COCO', 'WEISHI'],
+parser.add_argument('--dataset', default='VOC', choices=['VOC', 'COCO'],
                     type=str, help='VOC or COCO')
-parser.add_argument('--dataset_root', default='',
+parser.add_argument('--dataset_root', default=VOC_ROOT,
                     help='Dataset root directory path')
-parser.add_argument('--jpg_xml_path', default='',
-                    help='Image XML mapping path')
-parser.add_argument('--label_name_path', default='',
-                    help='Label Name file path')
 parser.add_argument('--basenet', default='vgg16_reducedfc.pth',
                     help='Pretrained base model')
 parser.add_argument('--batch_size', default=32, type=int,
@@ -88,14 +83,10 @@ def train():
                                                           MEANS))
     elif args.dataset == 'VOC':
         if args.dataset_root == COCO_ROOT:
+            #by default dataset_root is VOC_ROOT, so when you have COCO_ROOT, it means you specify dataset_root, but dataset is still VOC, then error!
             parser.error('Must specify dataset if specifying dataset_root')
         cfg = voc
         dataset = VOCDetection(root=args.dataset_root,
-                               transform=SSDAugmentation(cfg['min_dim'],
-                                                         MEANS))
-    elif args.dataset == 'WEISHI':
-        cfg = weishi
-        dataset = WeishiDetection(image_xml_path=args.jpg_xml_path, label_file_path=args.label_name_path,
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          MEANS))
 
@@ -103,7 +94,7 @@ def train():
         import visdom
         viz = visdom.Visdom()
 
-    ssd_net = build_ssd('train', cfg['min_dim'], cfg['num_classes'])
+    ssd_net = build_ssd_vgg('train', cfg['min_dim'], cfg['num_classes'])
     net = ssd_net
 
     if args.cuda:
@@ -161,10 +152,10 @@ def train():
     batch_iterator = iter(data_loader)
     for iteration in range(args.start_iter, cfg['max_iter']):
         try:
-            images,targets = next(batch_iterator)
+            images, targets = next(batch_iterator)
         except StopIteration:
-            batch_iterator = iter(data_loader)
-            images,targets = next(batch_iterator)
+            batch_iterator = iter(data_loader)# the dataloader cannot re-initilize
+            images, targets = next(batch_iterator)
 
         if args.visdom and iteration != 0 and (iteration % epoch_size == 0):
             update_vis_plot(epoch, loc_loss, conf_loss, epoch_plot, None,
@@ -207,6 +198,7 @@ def train():
 
         if iteration != 0 and iteration % 5000 == 0:
             print('Saving state, iter:', iteration)
+            #whatever dataset you use, the name is COCO
             torch.save(ssd_net.state_dict(), 'weights/ssd300_COCO_' +
                        repr(iteration) + '.pth')
     torch.save(ssd_net.state_dict(),
@@ -227,7 +219,7 @@ def adjust_learning_rate(optimizer, gamma, step):
 def xavier(param):
     init.xavier_uniform(param)
 
-
+# initialize the weights for conv2d
 def weights_init(m):
     if isinstance(m, nn.Conv2d):
         xavier(m.weight.data)
