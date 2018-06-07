@@ -17,16 +17,13 @@ if sys.version_info[0] == 2:
 else:
     import xml.etree.ElementTree as ET
 
-'''
-VOC_CLASSES = (  # always index 0
+WEISHI_CLASSES = ( #always index 0
     'aeroplane', 'bicycle', 'bird', 'boat',
     'bottle', 'bus', 'car', 'cat', 'chair',
     'cow', 'diningtable', 'dog', 'horse',
     'motorbike', 'person', 'pottedplant',
     'sheep', 'sofa', 'train', 'tvmonitor')
 
-print(type(VOC_CLASSES))
-'''
 class WeishiAnnotationTransform(object):
     """Transforms a Weishi annotation into a Tensor of bbox coords and label index
     Initilized with a dictionary lookup of classnames to indexes
@@ -41,15 +38,15 @@ class WeishiAnnotationTransform(object):
     """
 
     def __init__(self, label_file_path = "", class_to_ind=None, keep_difficult=False):
-        VOC_CLASSES = list()
+        WEISHI_CLASSES = list()
         fin = open(label_file_path, 'r')
         for line in fin.readlines():
             line = line.strip()
-            VOC_CLASSES.append(line)
+            WEISHI_CLASSES.append(line)
         fin.close()
-        VOC_CLASSES = tuple(VOC_CLASSES)
+        WEISHI_CLASSES = tuple(WEISHI_CLASSES)
         self.class_to_ind = class_to_ind or dict(
-            zip(VOC_CLASSES, range(len(VOC_CLASSES))))
+            zip(WEISHI_CLASSES, range(len(WEISHI_CLASSES))))
         self.keep_difficult = keep_difficult
 
     def __call__(self, target, width, height):
@@ -133,11 +130,9 @@ class WeishiDetection(data.Dataset):
 
         if self.target_transform is not None:
             target = self.target_transform(target, width, height)
-            print("index: ", index, "target before: ", target)
 
         if self.transform is not None:
             target = np.array(target)
-            print("index: ", index, "target after: ", target)
             img, boxes, labels = self.transform(img, target[:, :4], target[:, 4])
             # to rgb
             img = img[:, :, (2, 1, 0)]

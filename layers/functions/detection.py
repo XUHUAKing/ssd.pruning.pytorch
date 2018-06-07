@@ -47,8 +47,10 @@ class Detect(Function):
             for cl in range(1, self.num_classes):
                 c_mask = conf_scores[cl].gt(self.conf_thresh) # greater than threshold
                 scores = conf_scores[cl][c_mask]# scores are those higher than threshold
-                if scores.dim() == 0:
                 # if means for this class, no object of this class exists in this image, because the scores for this class are lower than threshold
+                #if scores.dim() == 0:
+                #    continue
+                if scores.size(0) == 0:
                     continue
                 l_mask = c_mask.unsqueeze(1).expand_as(decoded_boxes)
                 #step 1. remaining boxes for reasonable classes's objects
