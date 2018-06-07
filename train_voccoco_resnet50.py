@@ -41,6 +41,8 @@ parser.add_argument('--cuda', default=True, type=str2bool,
                     help='Use CUDA to train model')
 parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float,
                     help='initial learning rate')
+parser.add_argument('--lr_step', default=30,
+                    help='Epoch interval for updating lr')
 parser.add_argument('--momentum', default=0.9, type=float,
                     help='Momentum value for optim')
 parser.add_argument('--weight_decay', default=5e-4, type=float,
@@ -212,7 +214,7 @@ def adjust_learning_rate(optimizer, gamma, epoch):
     # Adapted from PyTorch Imagenet example:
     # https://github.com/pytorch/examples/blob/master/imagenet/main.py
     """
-    step = epoch//30 # every 30 epoch
+    step = epoch//args.lr_step # every 30 epoch by default
     lr = args.lr * (gamma ** (step))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
