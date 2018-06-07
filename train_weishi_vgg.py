@@ -145,8 +145,6 @@ def train():
     print('Using the specified args:')
     print(args)
 
-    step_index = 0
-
     if args.visdom:
         vis_title = 'SSD.PyTorch on ' + dataset.name
         vis_legend = ['Loc Loss', 'Conf Loss', 'Total Loss']
@@ -159,7 +157,7 @@ def train():
                                   pin_memory=True)
     # create batch iterator
     batch_iterator = iter(data_loader)
-    for iteration in range(args.start_iter, cfg['max_iter']):
+    for iteration in range(args.start_iter, cfg['max_epoch']*epoch_size // args.batch_size):
         try:
             images,targets = next(batch_iterator)
         except StopIteration:
@@ -174,9 +172,9 @@ def train():
             conf_loss = 0
             epoch += 1
 
-        if iteration in cfg['lr_steps']:
-            step_index += 1
-            adjust_learning_rate(optimizer, args.gamma, step_index)
+#        if iteration in cfg['lr_steps']:
+        if iteration != 0 and iteration % epoch_size == 0:
+            adjust_learning_rate(optimizer, args.gamma, epoch)
 
         if args.cuda:
             images = Variable(images.cuda())
@@ -213,12 +211,13 @@ def train():
                args.save_folder + '' + args.dataset + '.pth')
 
 
-def adjust_learning_rate(optimizer, gamma, step):
-    """Sets the learning rate to the initial LR decayed by 10 at every
-        specified step
+def adjust_learning_rate(optimizer, gamma, epoch):
+    """Sets the learning rate to the initial LR decayed by 10 at
+        specified epoch
     # Adapted from PyTorch Imagenet example:
     # https://github.com/pytorch/examples/blob/master/imagenet/main.py
     """
+    step = epoch//30 # every 30 epoch
     lr = args.lr * (gamma ** (step))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
