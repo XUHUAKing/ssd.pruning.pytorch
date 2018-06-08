@@ -12,7 +12,7 @@ from data import WEISHI_CLASSES as labelmap #WEISHI_CLASSES is a global variable
 from PIL import Image
 from data import BaseTransform, WEISHI_CLASSES
 import torch.utils.data as data
-from models.ssd_vgg import build_ssd_vgg
+from models.ssd_vggres import build_ssd
 
 parser = argparse.ArgumentParser(description='Single Shot MultiBox Detection')
 parser.add_argument('--trained_model', default='weights/ssd_300_VOC0712.pth',
@@ -84,7 +84,7 @@ def test_net(save_folder, net, cuda, testset, transform, thresh):
 def test_voc():
     # load net
     num_classes = weishi['num_classes'] + 1 # +1 background
-    net = build_ssd_vgg('test', 300, num_classes) # initialize SSD
+    net = build_ssd('test', 300, num_classes, base='vgg') # initialize SSD
     net.load_state_dict(torch.load(args.trained_model))
     net.eval()
     print('Finished loading model!')

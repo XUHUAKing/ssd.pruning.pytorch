@@ -1,7 +1,7 @@
 from data import *
 from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
-from models.ssd_vgg import build_ssd_vgg
+from models.ssd_vggres import build_ssd
 import os
 import sys
 import time
@@ -96,7 +96,7 @@ def train():
         import visdom
         viz = visdom.Visdom()
 
-    ssd_net = build_ssd_vgg('train', cfg['min_dim'], cfg['num_classes'])
+    ssd_net = build_ssd('train', cfg['min_dim'], cfg['num_classes'], base='vgg')
     net = ssd_net
 
     if args.cuda:

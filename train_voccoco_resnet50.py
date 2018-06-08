@@ -1,7 +1,7 @@
 from data import *
 from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
-from models.ssd_resnet50 import build_ssd_resnet
+from models.ssd_vggres import build_ssd
 import os
 import sys
 import time
@@ -95,7 +95,7 @@ def train():
         import visdom
         viz = visdom.Visdom()
 
-    ssd_net = build_ssd_resnet('train', cfg['min_dim'], cfg['num_classes'])
+    ssd_net = build_ssd('train', cfg['min_dim'], cfg['num_classes'], base='resnet')
     net = ssd_net
 
     if args.cuda:
