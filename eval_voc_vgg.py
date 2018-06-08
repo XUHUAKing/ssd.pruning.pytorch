@@ -13,7 +13,7 @@ from data import VOC_ROOT, VOCAnnotationTransform, VOCDetection, BaseTransform
 from data import VOC_CLASSES as labelmap
 import torch.utils.data as data
 
-from ssd_vgg import build_ssd_vgg
+from models.ssd_vgg import build_ssd_vgg
 
 import sys
 import os

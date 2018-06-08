@@ -1,7 +1,7 @@
 from data import *
 from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
-from ssd_vgg import build_ssd_vgg
+from models.ssd_vgg import build_ssd_vgg
 import os
 import sys
 import time

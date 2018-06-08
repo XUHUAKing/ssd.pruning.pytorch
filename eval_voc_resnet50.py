@@ -13,7 +13,7 @@ from data import VOC_ROOT, VOCAnnotationTransform, VOCDetection, BaseTransform
 from data import VOC_CLASSES as labelmap
 import torch.utils.data as data
 
-from ssd_resnet50 import build_ssd_resnet
+from models.ssd_resnet50 import build_ssd_resnet
 
 import sys
 import os
