@@ -150,7 +150,7 @@ def train():
                                   pin_memory=True)
     # create batch iterator
     batch_iterator = iter(data_loader)
-    for iteration in range(args.start_iter, cfg['max_epoch']*epoch_size // args.batch_size):
+    for iteration in range(args.start_iter, cfg['max_epoch']*epoch_size):
         try:
             images, targets = next(batch_iterator)
         except StopIteration:
