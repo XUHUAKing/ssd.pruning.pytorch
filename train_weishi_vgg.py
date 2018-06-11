@@ -212,7 +212,6 @@ def train():
     torch.save(ssd_net.state_dict(),
                args.save_folder + '' + args.dataset + '.pth')
 
-
 def adjust_learning_rate(optimizer, gamma, epoch):
     """Sets the learning rate to the initial LR decayed by 10 at
         specified epoch

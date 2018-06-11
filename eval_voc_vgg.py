@@ -379,7 +379,7 @@ def test_net(save_folder, net, cuda, dataset, transform, top_k,
         im, gt, h, w = dataset.pull_item(i)
 
         x = Variable(im.unsqueeze(0))
-        if args.cuda:
+        if cuda:
             x = x.cuda()
         _t['im_detect'].tic()
         detections = net(x).data

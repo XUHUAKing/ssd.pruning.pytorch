@@ -27,7 +27,7 @@ class SSD_VGG(nn.Module):
     """
 
     def __init__(self, phase, size, base, extras, head, num_classes):
-        super(SSD, self).__init__()
+        super(SSD_VGG, self).__init__()
         self.phase = phase
         self.num_classes = num_classes
         self.cfg = (coco, voc)[num_classes == 21]#when num_classes==21, i.e. true/[1], then voc is chosen
@@ -133,7 +133,7 @@ class SSD_RESNET(nn.Module):
     """
 
     def __init__(self, phase, size, base, extras, head, num_classes):
-        super(SSD, self).__init__()
+        super(SSD_RESNET, self).__init__()
         self.phase = phase
         self.num_classes = num_classes
         self.cfg = (coco, voc)[num_classes == 21]#when num_classes==21, i.e. true/[1], then voc is chosen

@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from layers import *
-from .base_models import vgg, vgg_base
+#from .base_models import vgg, vgg_base
 
 
 def vgg(cfg, i=3, batch_norm=False):

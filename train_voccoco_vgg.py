@@ -14,6 +14,8 @@ import torch.nn.init as init
 import torch.utils.data as data
 import numpy as np
 import argparse
+# for evaluation
+from eval_voc_vgg import set_type, dataset_mean, test_net
 
 #os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 
@@ -54,6 +56,17 @@ parser.add_argument('--visdom', default=False, type=str2bool,
                     help='Use visdom for loss visualization')
 parser.add_argument('--save_folder', default='weights/',
                     help='Directory for saving checkpoint models')
+# Below two args must be specified if want to eval during training
+parser.add_argument('--evaluate', default=False,
+                    help='Evaluate at every epoch during training')
+parser.add_argument('--val_dataset_root', default=VOC_ROOT,
+                    help='Validation Dataset root directory path')# val_dataset_root
+parser.add_argument('--eval_folder', default='evals/',
+                    help='Directory for saving eval results')
+parser.add_argument('--confidence_threshold', default=0.01, type=float,
+                    help='Detection confidence threshold')
+parser.add_argument('--top_k', default=5, type=int,
+                    help='Further restrict the number of predictions to parse')
 args = parser.parse_args()
 
 
@@ -69,6 +82,8 @@ else:
 
 if not os.path.exists(args.save_folder):
     os.mkdir(args.save_folder)
+if not os.path.exists(args.eval_folder):
+    os.mkdir(args.eval_folder)
 
 
 def train():
@@ -83,6 +98,9 @@ def train():
         dataset = COCODetection(root=args.dataset_root,
                                 transform=SSDAugmentation(cfg['min_dim'],
                                                           MEANS))
+        # only support VOC evaluation now
+        val_dataset = VOCDetection(root=args.val_dataset_root, [('2007', set_type)],
+                                transform=BaseTransform(300, dataset_mean))
     elif args.dataset == 'VOC':
         if args.dataset_root == COCO_ROOT:
             #by default dataset_root is VOC_ROOT, so when you have COCO_ROOT, it means you specify dataset_root, but dataset is still VOC, then error!
@@ -91,6 +109,8 @@ def train():
         dataset = VOCDetection(root=args.dataset_root,
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          MEANS))
+        val_dataset = VOCDetection(root=args.val_dataset_root, [('2007', set_type)],
+                                transform=BaseTransform(300, dataset_mean))
 
     if args.visdom:
         import visdom
@@ -144,6 +164,7 @@ def train():
         iter_plot = create_vis_plot('Iteration', 'Loss', vis_title, vis_legend)
         epoch_plot = create_vis_plot('Epoch', 'Loss', vis_title, vis_legend)
 
+    # training data loader
     data_loader = data.DataLoader(dataset, args.batch_size,
                                   num_workers=args.num_workers,
                                   shuffle=True, collate_fn=detection_collate,
@@ -168,6 +189,15 @@ def train():
 #        if iteration in cfg['lr_steps']:
         if iteration != 0 and iteration % epoch_size == 0:
             adjust_learning_rate(optimizer, args.gamma, epoch)
+            # evaluation
+            if arg.evaluate == True:
+                net.eval() # switch to eval mode
+                print("Starting the evaluation mode...")
+                test_net(args.eval_folder, net, args.cuda, val_dataset,
+                         BaseTransform(net.size, dataset_mean), args.top_k, 300,
+                         thresh=args.confidence_threshold)
+                net.train()
+                print("Finishing the evaluation mode...")
 
         if args.cuda:
             images = Variable(images.cuda())
@@ -203,7 +233,6 @@ def train():
                        repr(iteration) + '.pth')
     torch.save(ssd_net.state_dict(),
                args.save_folder + '' + args.dataset + '.pth')
-
 
 def adjust_learning_rate(optimizer, gamma, epoch):
     """Sets the learning rate to the initial LR decayed by 10 at
