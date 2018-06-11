@@ -98,7 +98,7 @@ def train():
                                 transform=SSDAugmentation(cfg['min_dim'],
                                                           MEANS))
         # only support VOC evaluation now
-        val_dataset = VOCDetection(root=args.val_dataset_root, [('2007', set_type)],
+        val_dataset = VOCDetection(root=args.val_dataset_root, image_sets=[('2007', set_type)],
                                 transform=BaseTransform(300, dataset_mean))
     elif args.dataset == 'VOC':
         if args.dataset_root == COCO_ROOT:
@@ -108,7 +108,7 @@ def train():
         dataset = VOCDetection(root=args.dataset_root,
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          MEANS))
-        val_dataset = VOCDetection(root=args.val_dataset_root, [('2007', set_type)],
+        val_dataset = VOCDetection(root=args.val_dataset_root, image_sets=[('2007', set_type)],
                                 transform=BaseTransform(300, dataset_mean))
 
     if args.visdom:
@@ -193,7 +193,7 @@ def train():
         if iteration != 0 and iteration % epoch_size == 0:
             adjust_learning_rate(optimizer, args.gamma, epoch)
             # evaluation
-            if arg.evaluate == True:
+            if args.evaluate == True:
                 net.eval() # switch to eval mode
                 print("Starting the evaluation mode...")
                 test_net(args.eval_folder, net, args.cuda, val_dataset,

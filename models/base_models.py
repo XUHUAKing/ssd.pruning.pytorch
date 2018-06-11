@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from resnet import *
+from .resnet import *
 
 
 # This function is derived from torchvision VGG make_layers()

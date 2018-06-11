@@ -288,12 +288,12 @@ def build_ssd(phase, size=300, num_classes=21, base='vgg'):
         return
     # str(size) will change 300 to '300'
     if base =='resnet':
-        base_, extras_, head_ = vgg_multibox(vgg(vgg_base[str(size)], 3),
-                                         add_extras(extras[str(size)], 1024),
+        base_, extras_, head_ = resnet_multibox(resnet(),
+                                         add_extras(extras[str(size)], 2048),
                                          mbox[str(size)], num_classes)
         return SSD_RESNET(phase, size, base_, extras_, head_, num_classes)
     else:
-        base_, extras_, head_ = resnet_multibox(resnet(),
-                                         add_extras(extras[str(size)], 2048),
+        base_, extras_, head_ = vgg_multibox(vgg(vgg_base[str(size)], 3),
+                                         add_extras(extras[str(size)], 1024),
                                          mbox[str(size)], num_classes)
         return SSD_VGG(phase, size, base_, extras_, head_, num_classes)
