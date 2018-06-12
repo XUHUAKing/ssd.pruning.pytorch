@@ -1,4 +1,5 @@
 from data import *
+from data import VOC_CLASSES as labelmap
 from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
 from models.ssd_vggres import build_ssd
@@ -15,8 +16,9 @@ import torch.utils.data as data
 import numpy as np
 import argparse
 # for evaluation
-from eval_voc_resnet50 import set_type, dataset_mean, test_net
+from utils.eval_tools import * #val_dataset_root
 
+#os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
@@ -55,11 +57,9 @@ parser.add_argument('--visdom', default=False, type=str2bool,
                     help='Use visdom for loss visualization')
 parser.add_argument('--save_folder', default='weights/',
                     help='Directory for saving checkpoint models')
-# Below two args must be specified if want to eval during training
-parser.add_argument('--evaluate', default=False,
+# Below args must be specified if want to eval during training
+parser.add_argument('--evaluate', default=False, type=str2bool,
                     help='Evaluate at every epoch during training')
-parser.add_argument('--val_dataset_root', default=VOC_ROOT,
-                    help='Validation Dataset root directory path')# val_dataset_root
 parser.add_argument('--eval_folder', default='evals/',
                     help='Directory for saving eval results')
 parser.add_argument('--confidence_threshold', default=0.01, type=float,
@@ -98,7 +98,7 @@ def train():
                                 transform=SSDAugmentation(cfg['min_dim'],
                                                           MEANS))
         # only support VOC evaluation now
-        val_dataset = VOCDetection(root=args.val_dataset_root, image_sets=[('2007', set_type)],
+        val_dataset = VOCDetection(root=val_dataset_root, image_sets=[('2007', set_type)],
                                 transform=BaseTransform(300, dataset_mean))
     elif args.dataset == 'VOC':
         if args.dataset_root == COCO_ROOT:
@@ -108,7 +108,7 @@ def train():
         dataset = VOCDetection(root=args.dataset_root,
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          MEANS))
-        val_dataset = VOCDetection(root=args.val_dataset_root, image_sets=[('2007', set_type)],
+        val_dataset = VOCDetection(root=val_dataset_root, image_sets=[('2007', set_type)],
                                 transform=BaseTransform(300, dataset_mean))
 
     if args.visdom:
@@ -127,8 +127,7 @@ def train():
         ssd_net.load_weights(args.resume)
     else:
         #vgg_weights = torch.load(args.save_folder + args.basenet)
-        print('Loading base network...')
-        # Preloaded.
+        print('Loading base network...') # Preloaded.
         #ssd_net.resnet.load_state_dict(torch.load('resnet50-19c8e357.pth'))#(model_zoo.load_url(model_urls['resnet50']))
         #ssd_net.vgg.load_state_dict(vgg_weights)
 
@@ -190,16 +189,19 @@ def train():
             epoch += 1
 
         #if iteration in cfg['lr_steps']:
-        if iteration != 0 and iteration % epoch_size == 0:
+        if iteration != 0 and (iteration % epoch_size == 0):
             adjust_learning_rate(optimizer, args.gamma, epoch)
             # evaluation
             if args.evaluate == True:
-                net.eval() # switch to eval mode
-                print("Starting the evaluation mode...")
-                test_net(args.eval_folder, net, args.cuda, val_dataset,
-                         BaseTransform(net.size, dataset_mean), args.top_k, 300,
+                # load net
+                num_classes = len(labelmap) + 1                      # +1 for background
+                val_net = build_ssd('test', 300, num_classes, base='resnet')            # initialize SSD
+                val_net.load_state_dict(ssd_net.state_dict())
+                val_net.eval() # switch to eval mode
+                print("\nStarting the evaluation mode...")
+                test_net(args.eval_folder, val_net, args.cuda, val_dataset,
+                         BaseTransform(val_net.size, dataset_mean), args.top_k, 300,
                          thresh=args.confidence_threshold)
-                net.train()
                 print("Finishing the evaluation mode...")
 
         if args.cuda:

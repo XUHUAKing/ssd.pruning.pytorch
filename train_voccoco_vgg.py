@@ -1,4 +1,5 @@
 from data import *
+from data import VOC_CLASSES as labelmap
 from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
 from models.ssd_vggres import build_ssd
@@ -56,8 +57,8 @@ parser.add_argument('--visdom', default=False, type=str2bool,
                     help='Use visdom for loss visualization')
 parser.add_argument('--save_folder', default='weights/',
                     help='Directory for saving checkpoint models')
-# Below two args must be specified if want to eval during training
-parser.add_argument('--evaluate', default=False,
+# Below args must be specified if want to eval during training
+parser.add_argument('--evaluate', default=False, type=str2bool,
                     help='Evaluate at every epoch during training')
 parser.add_argument('--eval_folder', default='evals/',
                     help='Directory for saving eval results')
@@ -185,16 +186,19 @@ def train():
             epoch += 1
 
 #        if iteration in cfg['lr_steps']:
-        if iteration != 0 and iteration % epoch_size == 0:
+        if iteration != 0 and (iteration % epoch_size == 0):
             adjust_learning_rate(optimizer, args.gamma, epoch)
             # evaluation
             if args.evaluate == True:
-                net.eval() # switch to eval mode
-                print("Starting the evaluation mode...")
-                test_net(args.eval_folder, net, args.cuda, val_dataset,
-                         BaseTransform(net.size, dataset_mean), args.top_k, 300,
+                # load net
+                num_classes = len(labelmap) + 1                      # +1 for background
+                val_net = build_ssd('test', 300, num_classes, base='vgg')            # initialize SSD
+                val_net.load_state_dict(ssd_net.state_dict())
+                val_net.eval() # switch to eval mode
+                print("\nStarting the evaluation mode...")
+                test_net(args.eval_folder, val_net, args.cuda, val_dataset,
+                         BaseTransform(val_net.size, dataset_mean), args.top_k, 300,
                          thresh=args.confidence_threshold)
-                net.train()
                 print("Finishing the evaluation mode...")
 
         if args.cuda:
