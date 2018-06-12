@@ -66,6 +66,11 @@ parser.add_argument('--confidence_threshold', default=0.01, type=float,
                     help='Detection confidence threshold')
 parser.add_argument('--top_k', default=5, type=int,
                     help='Further restrict the number of predictions to parse')
+# for WEISHI dataset
+parser.add_argument('--jpg_xml_path', default='',
+                    help='Image XML mapping path')
+parser.add_argument('--label_name_path', default='',
+                    help='Label Name file path')
 args = parser.parse_args()
 
 
@@ -106,6 +111,19 @@ def train():
             parser.error('Must specify dataset if specifying dataset_root')
         cfg = voc
         dataset = VOCDetection(root=args.dataset_root,
+                               transform=SSDAugmentation(cfg['min_dim'],
+                                                         MEANS))
+        val_dataset = VOCDetection(root=val_dataset_root, image_sets=[('2007', set_type)],
+                                transform=BaseTransform(300, dataset_mean))
+    elif args.dataset == 'WEISHI':
+        if args.dataset_root == VOC_ROOT:
+            parser.error('Must specify dataset_root if specifying dataset')
+        if args.jpg_xml_path == '':
+            parser.error('Must specify jpg_xml_path if using WEISHI')
+        if args.label_name_path == '':
+            parser.error('Must specify label_name_path if using WEISHI')
+        cfg = weishi
+        dataset = WeishiDetection(image_xml_path=args.jpg_xml_path, label_file_path=args.label_name_path,
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          MEANS))
         val_dataset = VOCDetection(root=val_dataset_root, image_sets=[('2007', set_type)],
