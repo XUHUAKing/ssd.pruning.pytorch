@@ -1,3 +1,6 @@
+"""
+    This file is for model evaluation separately
+"""
 """Adapted from:
     @longcw faster_rcnn_pytorch: https://github.com/longcw/faster_rcnn_pytorch
     @rbgirshick py-faster-rcnn https://github.com/rbgirshick/py-faster-rcnn

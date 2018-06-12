@@ -15,7 +15,7 @@ import torch.utils.data as data
 import numpy as np
 import argparse
 # for evaluation
-from eval_voc_vgg import set_type, dataset_mean, test_net
+from utils.eval_tools import *#val_dataset_root
 
 #os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 
@@ -59,8 +59,6 @@ parser.add_argument('--save_folder', default='weights/',
 # Below two args must be specified if want to eval during training
 parser.add_argument('--evaluate', default=False,
                     help='Evaluate at every epoch during training')
-parser.add_argument('--val_dataset_root', default=VOC_ROOT,
-                    help='Validation Dataset root directory path')# val_dataset_root
 parser.add_argument('--eval_folder', default='evals/',
                     help='Directory for saving eval results')
 parser.add_argument('--confidence_threshold', default=0.01, type=float,
@@ -99,7 +97,7 @@ def train():
                                 transform=SSDAugmentation(cfg['min_dim'],
                                                           MEANS))
         # only support VOC evaluation now
-        val_dataset = VOCDetection(root=args.val_dataset_root, image_sets=[('2007', set_type)],
+        val_dataset = VOCDetection(root=val_dataset_root, image_sets=[('2007', set_type)],
                                 transform=BaseTransform(300, dataset_mean))
     elif args.dataset == 'VOC':
         if args.dataset_root == COCO_ROOT:
@@ -109,7 +107,7 @@ def train():
         dataset = VOCDetection(root=args.dataset_root,
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          MEANS))
-        val_dataset = VOCDetection(root=args.val_dataset_root, image_sets=[('2007', set_type)],
+        val_dataset = VOCDetection(root=val_dataset_root, image_sets=[('2007', set_type)],
                                 transform=BaseTransform(300, dataset_mean))
 
     if args.visdom:
