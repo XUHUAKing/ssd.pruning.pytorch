@@ -149,10 +149,6 @@ def do_python_eval(output_dir='output', use_07=True):
     print('{:.3f}'.format(np.mean(aps)))
     print('~~~~~~~~')
     print('')
-    print('--------------------------------------------------------------')
-    print('Results computed with the **unofficial** Python eval code.')
-    print('Results should be very close to the official MATLAB eval code.')
-    print('--------------------------------------------------------------')
 
 
 def voc_ap(rec, prec, use_07_metric=True):
