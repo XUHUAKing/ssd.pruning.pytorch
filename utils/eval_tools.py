@@ -27,6 +27,9 @@ else:
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
 
+"""
+    the tools for mAP evaluation for vgg
+"""
 # the val dataset root
 val_dataset_root = '/cephfs/share/data/VOCdevkit/'
 
@@ -113,7 +116,7 @@ def write_voc_results_file(all_boxes, dataset):
         filename = get_voc_results_file_template(set_type, cls)
         with open(filename, 'wt') as f:
             for im_ind, index in enumerate(dataset.ids):
-                dets = all_boxes[cls_ind+1][im_ind]
+                dets = all_boxes[cls_ind+1][im_ind]# add index 1 for background class
                 if dets == []:
                     continue
                 # the VOCdevkit expects 1-based indices
@@ -184,7 +187,7 @@ def voc_ap(rec, prec, use_07_metric=True):
         ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
     return ap
 
-
+# for a particular class
 def voc_eval(detpath,
              annopath,
              imagesetfile,
@@ -205,7 +208,7 @@ annopath: Path to annotations
    annopath.format(imagename) should be the xml annotations file.
 imagesetfile: Text file containing the list of images, one image per line.
 classname: Category name (duh)
-cachedir: Directory for caching the annotations
+cachedir: Directory for caching/storing the annotations .pkl
 [ovthresh]: Overlap threshold (default = 0.5)
 [use_07_metric]: Whether to use VOC07's 11 point AP computation
    (default True)
@@ -285,8 +288,8 @@ cachedir: Directory for caching the annotations
                 iymin = np.maximum(BBGT[:, 1], bb[1])
                 ixmax = np.minimum(BBGT[:, 2], bb[2])
                 iymax = np.minimum(BBGT[:, 3], bb[3])
-                iw = np.maximum(ixmax - ixmin, 0.)
-                ih = np.maximum(iymax - iymin, 0.)
+                iw = np.maximum(ixmax - ixmin, 0.)# find the vertex of intersected rectangle
+                ih = np.maximum(iymax - iymin, 0.)# find the vertex of intersected rectangle
                 inters = iw * ih
                 uni = ((bb[2] - bb[0]) * (bb[3] - bb[1]) +
                        (BBGT[:, 2] - BBGT[:, 0]) *
@@ -296,14 +299,14 @@ cachedir: Directory for caching the annotations
                 jmax = np.argmax(overlaps)
 
             if ovmax > ovthresh:
-                if not R['difficult'][jmax]:
-                    if not R['det'][jmax]:
+                if not R['difficult'][jmax]:# ignore difficult
+                    if not R['det'][jmax]: #R['det'][jmax] has NOT already been 1
                         tp[d] = 1.
                         R['det'][jmax] = 1
                     else:
-                        fp[d] = 1.
+                        fp[d] = 1. # false positive
             else:
-                fp[d] = 1.
+                fp[d] = 1. #false positive
 
         # compute precision recall
         fp = np.cumsum(fp)
@@ -338,16 +341,16 @@ def test_net(save_folder, net, cuda, dataset, transform, top_k,
     for i in range(num_images):
         im, gt, h, w = dataset.pull_item(i)
 
-        x = Variable(im.unsqueeze(0))
+        x = Variable(im.unsqueeze(0)) #insert a dimension of size one at the dim 0
         if cuda:
             x = x.cuda()
         _t['im_detect'].tic()
-        detections = net(x).data
-        detect_time = _t['im_detect'].toc(average=False)
+        detections = net(x).data # get the detection results
+        detect_time = _t['im_detect'].toc(average=False) #store the detection time
 
         # skip j = 0, because it's the background class
-        for j in range(1, detections.size(1)):
-            dets = detections[0, j, :]
+        for j in range(1, detections.size(1)): # for every class
+            dets = detections[0, j, :]#size( ** , 5)
             mask = dets[:, 0].gt(0.).expand(5, dets.size(0)).t()
             dets = torch.masked_select(dets, mask).view(-1, 5)
             if dets.dim() == 0:
@@ -363,18 +366,26 @@ def test_net(save_folder, net, cuda, dataset, transform, top_k,
             cls_dets = np.hstack((boxes.cpu().numpy(),
                                   scores[:, np.newaxis])).astype(np.float32,
                                                                  copy=False)
-            all_boxes[j][i] = cls_dets
+            all_boxes[j][i] = cls_dets #[class][imageID] = 1 x 5 where 5 is box_coord + score
 
         print('im_detect: {:d}/{:d} {:.3f}s'.format(i + 1,
                                                     num_images, detect_time))
 
-    with open(det_file, 'wb') as f:
+    with open(det_file, 'wb') as f:#write the detection results into det_file
         pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
 
     print('Evaluating detections')
     evaluate_detections(all_boxes, output_dir, dataset)
 
-
 def evaluate_detections(box_list, output_dir, dataset):
     write_voc_results_file(box_list, dataset)
     do_python_eval(output_dir)
+
+
+"""
+    the tools for mAP evaluation for coco
+"""
+
+"""
+    the tools for mAP evaluation for weishi
+"""

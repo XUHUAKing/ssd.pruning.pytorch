@@ -17,6 +17,8 @@ if sys.version_info[0] == 2:
 else:
     import xml.etree.ElementTree as ET
 
+# This list will be updated once WeishiAnnotationTransform() is called
+# fake classes temporary
 WEISHI_CLASSES = ( #always index 0
     'aeroplane', 'bicycle', 'bird', 'boat',
     'bottle', 'bus', 'car', 'cat', 'chair',
@@ -38,6 +40,7 @@ class WeishiAnnotationTransform(object):
     """
 
     def __init__(self, label_file_path = "", class_to_ind=None, keep_difficult=False):
+        global WEISHI_CLASSES # declare that WEISHI_CLASSES is changed globally by this function
         WEISHI_CLASSES = list()
         fin = open(label_file_path, 'r')
         for line in fin.readlines():
