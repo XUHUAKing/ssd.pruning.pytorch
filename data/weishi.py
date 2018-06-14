@@ -109,12 +109,19 @@ class WeishiDetection(data.Dataset):
         self._annopath = {}
         self._imgpath = {}
         self.name = "weishi"
+        # below two args are for evaluation dataset
+        self.image_xml_path = image_xml_path
+        self.ids = list() # store the names for each image
         fin = open(image_xml_path, "r")
         count = 0
         for line in fin.readlines():
             line = line.strip()
             des = line.split(' ')
             self._annopath[count] = des[1]
+            tree = ET.parse(des[1])
+            for fname in tree.findall('filename'):
+                self.ids.append(fname.text)
+                break # only one name
             self._imgpath[count] = des[0]
             count = count + 1
         fin.close()

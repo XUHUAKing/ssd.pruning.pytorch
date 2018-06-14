@@ -1,5 +1,7 @@
 from data import *
-from data import VOC_CLASSES as labelmap
+from data import VOC_CLASSES as voc_labelmap
+from data import COCO_CLASSES as coco_labelmap
+from data import WEISHI_CLASSES as weishi_labelmap
 from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
 from models.ssd_vggres import build_ssd
@@ -99,22 +101,24 @@ def train():
                   "--dataset_root was not specified.")
             args.dataset_root = COCO_ROOT
         cfg = coco
+        set_name = 'coco'
         dataset = COCODetection(root=args.dataset_root,
                                 transform=SSDAugmentation(cfg['min_dim'],
                                                           MEANS))
         # only support VOC evaluation now
-        val_dataset = VOCDetection(root=val_dataset_root, image_sets=[('2007', set_type)],
-                                transform=BaseTransform(300, dataset_mean))
+        val_dataset = COCODetection(root=coco_val_dataset_root,
+                                transform=BaseTransform(300, coco_dataset_mean))
     elif args.dataset == 'VOC':
         if args.dataset_root == COCO_ROOT:
             #by default dataset_root is VOC_ROOT, so when you have COCO_ROOT, it means you specify dataset_root, but dataset is still VOC, then error!
             parser.error('Must specify dataset if specifying dataset_root')
         cfg = voc
+        set_name = 'voc'
         dataset = VOCDetection(root=args.dataset_root,
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          MEANS))
-        val_dataset = VOCDetection(root=val_dataset_root, image_sets=[('2007', set_type)],
-                                transform=BaseTransform(300, dataset_mean))
+        val_dataset = VOCDetection(root=voc_val_dataset_root, image_sets=[('2007', set_type)],
+                                transform=BaseTransform(300, voc_dataset_mean))
     elif args.dataset == 'WEISHI':
         if args.dataset_root == VOC_ROOT:
             parser.error('Must specify dataset_root if specifying dataset')
@@ -123,11 +127,12 @@ def train():
         if args.label_name_path == '':
             parser.error('Must specify label_name_path if using WEISHI')
         cfg = weishi
+        set_name = 'weishi'
         dataset = WeishiDetection(image_xml_path=args.jpg_xml_path, label_file_path=args.label_name_path,
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          MEANS))
-        val_dataset = VOCDetection(root=val_dataset_root, image_sets=[('2007', set_type)],
-                                transform=BaseTransform(300, dataset_mean))
+        val_dataset = WeishiDetection(image_xml_path=weishi_val_imgxml_path, label_file_path=args.label_name_path,
+                                transform=BaseTransform(300, weishi_dataset_mean))
 
     if args.visdom:
         import visdom
@@ -209,14 +214,23 @@ def train():
             # evaluation
             if args.evaluate == True:
                 # load net
-                num_classes = len(labelmap) + 1                      # +1 for background
+                if set_name=='weishi':
+                    lm = weishi_labelmap
+                    val_dataset_mean = weishi_dataset_mean # import from eval_tools
+                elif set_name=='coco':
+                    lm = coco_labelmap
+                    val_dataset_mean = coco_dataset_mean
+                else:
+                    lm = voc_labelmap
+                    val_dataset_mean = voc_dataset_mean
+                num_classes = len(lm) + 1                      # +1 for background
                 val_net = build_ssd('test', 300, num_classes, base='vgg')            # initialize SSD
                 val_net.load_state_dict(ssd_net.state_dict())
                 val_net.eval() # switch to eval mode
                 print("\nStarting the evaluation mode...")
                 test_net(args.eval_folder, val_net, args.cuda, val_dataset,
-                         BaseTransform(val_net.size, dataset_mean), args.top_k, 300,
-                         thresh=args.confidence_threshold)
+                         BaseTransform(val_net.size, val_dataset_mean), args.top_k, 300,
+                         thresh=args.confidence_threshold, set=set_name)
                 print("Finishing the evaluation mode...")
 
         if args.cuda:

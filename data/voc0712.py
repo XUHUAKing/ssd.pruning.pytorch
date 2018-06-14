@@ -114,7 +114,7 @@ class VOCDetection(data.Dataset):
         self.name = dataset_name
         self._annopath = osp.join('%s', 'Annotations', '%s.xml')
         self._imgpath = osp.join('%s', 'JPEGImages', '%s.jpg')
-        self.ids = list()
+        self.ids = list() # store the names for each image
         for (year, name) in image_sets:#2007/2012 ， trainval
             rootpath = osp.join(self.root, 'VOC' + year)
             for line in open(osp.join(rootpath, 'ImageSets', 'Main', name + '.txt')):

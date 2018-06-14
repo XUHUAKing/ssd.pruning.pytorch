@@ -1,5 +1,6 @@
 """
     This file includes util tools for evaluation during training
+    Tools for mAP evaluation
 """
 from __future__ import print_function
 import torch
@@ -7,7 +8,9 @@ import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.autograd import Variable
 from data import VOC_ROOT, VOCAnnotationTransform, VOCDetection, BaseTransform
-from data import VOC_CLASSES as labelmap
+from data import VOC_CLASSES as voc_labelmap
+from data import COCO_CLASSES as coco_labelmap
+from data import WEISHI_CLASSES as weishi_labelmap
 import torch.utils.data as data
 
 import sys
@@ -27,20 +30,39 @@ else:
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
 
-"""
-    the tools for mAP evaluation for vgg
-"""
-# the val dataset root
-val_dataset_root = '/cephfs/share/data/VOCdevkit/'
 
-annopath = os.path.join(val_dataset_root, 'VOC2007', 'Annotations', '%s.xml')
-imgpath = os.path.join(val_dataset_root, 'VOC2007', 'JPEGImages', '%s.jpg')
-imgsetpath = os.path.join(val_dataset_root, 'VOC2007', 'ImageSets',
+"""FOR VOC"""
+# the val dataset root
+voc_val_dataset_root = '/cephfs/share/data/VOCdevkit/'
+
+annopath = os.path.join(voc_val_dataset_root, 'VOC2007', 'Annotations', '%s.xml')
+imgpath = os.path.join(voc_val_dataset_root, 'VOC2007', 'JPEGImages', '%s.jpg')
+imgsetpath = os.path.join(voc_val_dataset_root, 'VOC2007', 'ImageSets',
                           'Main', '{:s}.txt')
 YEAR = '2007'
-devkit_path = val_dataset_root + 'VOC' + YEAR
+devkit_path = voc_val_dataset_root + 'VOC' + YEAR
+voc_dataset_mean = (104, 117, 123) #val dataset mean
+
+"""FOR COCO"""
+# the val dataset root
+coco_val_dataset_root = '/cephfs/share/data/coco_xy/'
+coco_path = coco_val_dataset_root
+coco_dataset_mean = (104, 117, 123) #val dataset mean
+
+"""FOR WEISHI"""
+weishi_val_dataset_root = ''
+weishi_val_imgxml_path = ''
+weishi_path = weishi_val_dataset_root
+weishi_dataset_mean = (104, 117, 123) #val dataset mean
+
+# global variable
+val_dataset_root = voc_val_dataset_root #default
+dataset_path = devkit_path
 dataset_mean = (104, 117, 123)
-set_type = 'test'
+labelmap = voc_labelmap
+gset = 'voc' # dataset type
+
+set_type = 'test' # for every one
 
 
 class Timer(object):
@@ -70,7 +92,8 @@ class Timer(object):
 
 def parse_rec(filename):
     """ Parse a PASCAL VOC xml file """
-    tree = ET.parse(filename)
+    """ Parse a WEISHI xml file """
+    tree = ET.parse(filename) #filename is the path
     objects = []
     for obj in tree.findall('object'):
         obj_struct = {}
@@ -100,35 +123,40 @@ def get_output_dir(name, phase):
     return filedir
 
 
-def get_voc_results_file_template(image_set, cls):
+#def get_voc_results_file_template(image_set, cls):
+def get_results_file_template(image_set, cls):
     # VOCdevkit/VOC2007/results/det_test_aeroplane.txt
     filename = 'det_' + image_set + '_%s.txt' % (cls)
-    filedir = os.path.join(devkit_path, 'results')
+    filedir = os.path.join(dataset_path, 'results')
     if not os.path.exists(filedir):
         os.makedirs(filedir)
     path = os.path.join(filedir, filename)
     return path
 
 
-def write_voc_results_file(all_boxes, dataset):
+#def write_voc_results_file(all_boxes, dataset, labelmap):
+def write_results_file(all_boxes, dataset):
     for cls_ind, cls in enumerate(labelmap):
-        print('Writing {:s} VOC results file'.format(cls))
-        filename = get_voc_results_file_template(set_type, cls)
+        #print('Writing {:s} VOC results file'.format(cls))
+        print('Writing {:s} results file'.format(cls))
+        #filename = get_voc_results_file_template(set_type, cls)
+        filename = get_results_file_template(set_type, cls)
         with open(filename, 'wt') as f:
             for im_ind, index in enumerate(dataset.ids):
                 dets = all_boxes[cls_ind+1][im_ind]# add index 1 for background class
                 if dets == []:
                     continue
-                # the VOCdevkit expects 1-based indices
-                for k in range(dets.shape[0]):
+                # the VOCdevkit expects 1-based indices ????
+                for k in range(dets.shape[0]):# for a class in an image
+                    # {image_id} {score} {xcor} {xcor} {ycor} {ycor}
                     f.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.
                             format(index[1], dets[k, -1],
                                    dets[k, 0] + 1, dets[k, 1] + 1,
                                    dets[k, 2] + 1, dets[k, 3] + 1))
 
 
-def do_python_eval(output_dir='output', use_07=True):
-    cachedir = os.path.join(devkit_path, 'annotations_cache')
+def do_python_eval(output_dir='output', use_07=True, dataset):
+    cachedir = os.path.join(dataset_path, 'annotations_cache')
     aps = []
     # The PASCAL VOC metric changed in 2010
     use_07_metric = use_07
@@ -136,14 +164,23 @@ def do_python_eval(output_dir='output', use_07=True):
     if not os.path.isdir(output_dir):
         os.mkdir(output_dir)
     for i, cls in enumerate(labelmap):
-        filename = get_voc_results_file_template(set_type, cls)
-        rec, prec, ap = voc_eval(
-           filename, annopath, imgsetpath.format(set_type), cls, cachedir,
-           ovthresh=0.5, use_07_metric=use_07_metric)
-        aps += [ap]
+        #filename = get_voc_results_file_template(set_type, cls)
+        filename = get_results_file_template(set_type, cls)
+        if gset == 'weishi':
+            rec, prec, ap = weishi_eval(
+                filename, dataset, cls, cachedir,
+                ovthresh=0.5, use_07_metric=use_07_metric)
+        elif gset == 'coco':
+            rec, prec, ap = coco_eval()
+        else: # voc by default
+            rec, prec, ap = voc_eval(
+               filename, annopath, imgsetpath.format(set_type), cls, cachedir,
+               ovthresh=0.5, use_07_metric=use_07_metric)
+        aps += [ap] # AP = AVG(Precision for each of 11 Recalls's precision)
         print('AP for {} = {:.4f}'.format(cls, ap))
         with open(os.path.join(output_dir, cls + '_pr.pkl'), 'wb') as f:
             pickle.dump({'rec': rec, 'prec': prec, 'ap': ap}, f)
+    # MAP = AVG(AP for each object class)
     print('Mean AP = {:.4f}'.format(np.mean(aps)))
     print('~~~~~~~~')
     print('Results:')
@@ -153,8 +190,8 @@ def do_python_eval(output_dir='output', use_07=True):
     print('~~~~~~~~')
     print('')
 
-
-def voc_ap(rec, prec, use_07_metric=True):
+#def voc_ap(rec, prec, use_07_metric=true):
+def ap(rec, prec, use_07_metric=true):
     """ ap = voc_ap(rec, prec, [use_07_metric])
     Compute VOC AP given precision and recall.
     If use_07_metric is true, uses the
@@ -163,7 +200,7 @@ def voc_ap(rec, prec, use_07_metric=True):
     if use_07_metric:
         # 11 point metric
         ap = 0.
-        for t in np.arange(0., 1.1, 0.1):
+        for t in np.arange(0., 1.1, 0.1): # [0, 0.1, 0.2, 0.3 ..., 1]
             if np.sum(rec >= t) == 0:
                 p = 0
             else:
@@ -187,15 +224,9 @@ def voc_ap(rec, prec, use_07_metric=True):
         ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
     return ap
 
-# for a particular class
-def voc_eval(detpath,
-             annopath,
-             imagesetfile,
-             classname,
-             cachedir,
-             ovthresh=0.5,
-             use_07_metric=True):
-    """rec, prec, ap = voc_eval(detpath,
+"""FOR VOC"""
+"""
+rec, prec, ap = voc_eval(detpath,
                            annopath,
                            imagesetfile,
                            classname,
@@ -213,6 +244,14 @@ cachedir: Directory for caching/storing the annotations .pkl
 [use_07_metric]: Whether to use VOC07's 11 point AP computation
    (default True)
 """
+# for a specific class
+def voc_eval(detpath,
+             annopath,
+             imagesetfile,
+             classname,
+             cachedir,
+             ovthresh=0.5,
+             use_07_metric=True):
 # assumes detections are in detpath.format(classname)
 # assumes annotations are in annopath.format(imagename)
 # assumes imagesetfile is a text file with each line an image name
@@ -241,16 +280,21 @@ cachedir: Directory for caching/storing the annotations .pkl
         # load
         with open(cachefile, 'rb') as f:
             recs = pickle.load(f)
+    # recs stores the annots for each images
+    # class_recs stores the gt for a class
 
     # extract gt objects for this class
     class_recs = {}
     npos = 0
+    # go through every image
     for imagename in imagenames:
+        # and extract those objects in this image that are under this designated class
         R = [obj for obj in recs[imagename] if obj['name'] == classname]
-        bbox = np.array([x['bbox'] for x in R])
+        bbox = np.array([x['bbox'] for x in R]) # the object belongs to this class
         difficult = np.array([x['difficult'] for x in R]).astype(np.bool)
         det = [False] * len(R)
         npos = npos + sum(~difficult)
+        # for each image, store the bboxs for this class inside this image
         class_recs[imagename] = {'bbox': bbox,
                                  'difficult': difficult,
                                  'det': det}
@@ -261,7 +305,7 @@ cachedir: Directory for caching/storing the annotations .pkl
         lines = f.readlines()
     if any(lines) == 1:
 
-        splitlines = [x.strip().split(' ') for x in lines]
+        splitlines = [x.strip().split(' ') for x in lines] # [[image_id1, confidence1, xmin1, xmax1, ymin1, ymax1], [], [], []...]
         image_ids = [x[0] for x in splitlines]
         confidence = np.array([float(x[1]) for x in splitlines])
         BB = np.array([[float(z) for z in x[2:]] for x in splitlines])
@@ -309,13 +353,13 @@ cachedir: Directory for caching/storing the annotations .pkl
                 fp[d] = 1. #false positive
 
         # compute precision recall
-        fp = np.cumsum(fp)
+        fp = np.cumsum(fp)# how many 1 in fp array
         tp = np.cumsum(tp)
         rec = tp / float(npos)
         # avoid divide by zero in case the first detection matches a difficult
         # ground truth
         prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
-        ap = voc_ap(rec, prec, use_07_metric)
+        ap = ap(rec, prec, use_07_metric)
     else:
         rec = -1.
         prec = -1.
@@ -323,9 +367,161 @@ cachedir: Directory for caching/storing the annotations .pkl
 
     return rec, prec, ap
 
+"""FOR COCO"""
+def coco_eval:
+    # use the official COCO evaluation code
+    pass
 
+"""FOR WEISHI"""
+def weishi_eval(detpath,
+                dataset,
+                classname,
+                cachedir,
+                ovthresh=0.5,
+                use_07_metric=True):
+    # first load gt
+    if not os.path.isdir(cachedir):
+        os.mkdir(cachedir)
+    cachefile = os.path.join(cachedir, 'annots.pkl')
+    imagenames = dataset.ids# a list of image ids
+    if not os.path.isfile(cachefile):
+        # load annots
+        recs = {}
+        # read list of images
+        fin = open(dataset.image_xml_path, 'r')
+        for i, line in enumerate(fin.readlines()):
+            line = line.strip()
+            des = line.split(' ')
+            annopath = des[1]
+            imagename = imagenames[i]
+            recs[imagename] = parse_rec(annopath)
+            if i % 100 == 0:
+                print('Reading annotation for {:d}/{:d}'.format(
+                   i + 1, len(imagenames)))
+        # save
+        print('Saving cached annotations to {:s}'.format(cachefile))
+        with open(cachefile, 'wb') as f:
+            pickle.dump(recs, f)
+    else:
+        # load
+        with open(cachefile, 'rb') as f:
+            recs = pickle.load(f)
+    # recs stores the annots for each images
+    # class_recs stores the gt for a class
+
+    # extract gt objects for this class
+    class_recs = {}
+    npos = 0
+    # go through every image
+    for imagename in imagenames:
+        # and extract those objects in this image that are under this designated class
+        R = [obj for obj in recs[imagename] if obj['name'] == classname]
+        bbox = np.array([x['bbox'] for x in R]) # the object belongs to this class
+        difficult = np.array([x['difficult'] for x in R]).astype(np.bool)
+        det = [False] * len(R)
+        npos = npos + sum(~difficult)
+        # for each image, store the bboxs for this class inside this image
+        class_recs[imagename] = {'bbox': bbox,
+                                 'difficult': difficult,
+                                 'det': det}
+
+    # read dets
+    detfile = detpath.format(classname)
+    with open(detfile, 'r') as f:
+        lines = f.readlines()
+    if any(lines) == 1:
+
+        splitlines = [x.strip().split(' ') for x in lines] # [[image_id1, confidence1, xmin1, xmax1, ymin1, ymax1], [], [], []...]
+        image_ids = [x[0] for x in splitlines]
+        confidence = np.array([float(x[1]) for x in splitlines])
+        BB = np.array([[float(z) for z in x[2:]] for x in splitlines])
+
+        # sort by confidence
+        sorted_ind = np.argsort(-confidence)
+        sorted_scores = np.sort(-confidence)
+        BB = BB[sorted_ind, :]
+        image_ids = [image_ids[x] for x in sorted_ind]
+
+        # go down dets and mark TPs and FPs
+        nd = len(image_ids)
+        tp = np.zeros(nd)
+        fp = np.zeros(nd)
+        for d in range(nd):
+            R = class_recs[image_ids[d]]
+            bb = BB[d, :].astype(float)
+            ovmax = -np.inf
+            BBGT = R['bbox'].astype(float)
+            if BBGT.size > 0:
+                # compute overlaps
+                # intersection
+                ixmin = np.maximum(BBGT[:, 0], bb[0])
+                iymin = np.maximum(BBGT[:, 1], bb[1])
+                ixmax = np.minimum(BBGT[:, 2], bb[2])
+                iymax = np.minimum(BBGT[:, 3], bb[3])
+                iw = np.maximum(ixmax - ixmin, 0.)# find the vertex of intersected rectangle
+                ih = np.maximum(iymax - iymin, 0.)# find the vertex of intersected rectangle
+                inters = iw * ih
+                uni = ((bb[2] - bb[0]) * (bb[3] - bb[1]) +
+                       (BBGT[:, 2] - BBGT[:, 0]) *
+                       (BBGT[:, 3] - BBGT[:, 1]) - inters)
+                overlaps = inters / uni
+                ovmax = np.max(overlaps)
+                jmax = np.argmax(overlaps)
+
+            if ovmax > ovthresh:
+                if not R['difficult'][jmax]:# ignore difficult
+                    if not R['det'][jmax]: #R['det'][jmax] has NOT already been 1
+                        tp[d] = 1.
+                        R['det'][jmax] = 1
+                    else:
+                        fp[d] = 1. # false positive
+            else:
+                fp[d] = 1. #false positive
+
+        # compute precision recall
+        fp = np.cumsum(fp)# how many 1 in fp array
+        tp = np.cumsum(tp)
+        rec = tp / float(npos)
+        # avoid divide by zero in case the first detection matches a difficult
+        # ground truth
+        prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
+        ap = ap(rec, prec, use_07_metric)
+    else:
+        rec = -1.
+        prec = -1.
+        ap = -1.
+
+    return rec, prec, ap
+
+"""
+    Args:
+        save_folder: the eval results saving folder
+        net: test-type ssd net
+        dataset: validation dataset
+        transform: BaseTransform
+        labelmap: labelmap for different dataset (voc, coco, weishi)
+"""
 def test_net(save_folder, net, cuda, dataset, transform, top_k,
-             im_size=300, thresh=0.05):
+             im_size=300, thresh=0.05, set='voc'):
+    global val_dataset_root, dataset_path, dataset_mean, labelmap, gset
+    # update global variable
+    gset = set
+    if set == 'voc':
+        val_dataset_root = voc_val_dataset_root
+        dataset_path = devkit_path
+        dataset_mean = voc_dataset_mean
+        labelmap = voc_labelmap
+    elif set == 'coco':
+        val_dataset_root = coco_val_dataset_root
+        dataset_path = coco_path
+        dataset_mean = coco_dataset_mean
+        labelmap = coco_labelmap
+    elif set == 'weishi':
+        val_dataset_root = weishi_val_dataset_root
+        dataset_path = weishi_path
+        dataset_mean = weishi_dataset_mean
+        labelmap = weishi_labelmap
+
     num_images = len(dataset)
     # all detections are collected into:
     #    all_boxes[cls][image] = N x 5 array of detections in
@@ -335,8 +531,8 @@ def test_net(save_folder, net, cuda, dataset, transform, top_k,
 
     # timers
     _t = {'im_detect': Timer(), 'misc': Timer()}
-    output_dir = get_output_dir('ssd300_120000', set_type)
-    det_file = os.path.join(output_dir, 'detections.pkl')
+    output_dir = get_output_dir('ssd300_120000', set_type) #directory storing output results
+    det_file = os.path.join(output_dir, 'detections.pkl') #file storing output result under output_dir
 
     for i in range(num_images):
         im, gt, h, w = dataset.pull_item(i)
@@ -378,14 +574,6 @@ def test_net(save_folder, net, cuda, dataset, transform, top_k,
     evaluate_detections(all_boxes, output_dir, dataset)
 
 def evaluate_detections(box_list, output_dir, dataset):
-    write_voc_results_file(box_list, dataset)
-    do_python_eval(output_dir)
-
-
-"""
-    the tools for mAP evaluation for coco
-"""
-
-"""
-    the tools for mAP evaluation for weishi
-"""
+    #write_voc_results_file(box_list, dataset, labelmap)
+    write_results_file(box_list, dataset) # write down the detetcion results
+    do_python_eval(output_dir=output_dir, dataset=dataset) # after getting the result file, do evaluation and store in output_dir
