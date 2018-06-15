@@ -155,7 +155,7 @@ def write_results_file(all_boxes, dataset):
                                    dets[k, 2] + 1, dets[k, 3] + 1))
 
 
-def do_python_eval(output_dir='output', use_07=True, dataset):
+def do_python_eval(dataset, output_dir='output', use_07=True):
     cachedir = os.path.join(dataset_path, 'annotations_cache')
     aps = []
     # The PASCAL VOC metric changed in 2010
@@ -191,7 +191,7 @@ def do_python_eval(output_dir='output', use_07=True, dataset):
     print('')
 
 #def voc_ap(rec, prec, use_07_metric=true):
-def ap(rec, prec, use_07_metric=true):
+def ap(rec, prec, use_07_metric=True):
     """ ap = voc_ap(rec, prec, [use_07_metric])
     Compute VOC AP given precision and recall.
     If use_07_metric is true, uses the
@@ -368,7 +368,7 @@ def voc_eval(detpath,
     return rec, prec, ap
 
 """FOR COCO"""
-def coco_eval:
+def coco_eval():
     # use the official COCO evaluation code
     pass
 
