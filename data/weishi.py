@@ -118,7 +118,7 @@ class WeishiDetection(data.Dataset):
             line = line.strip()
             des = line.split(' ')
             self._annopath[count] = des[1]
-            tree = ET.parse(des[1])
+            tree = ET.parse(des[1]).getroot()
             for fname in tree.findall('filename'):
                 self.ids.append(fname.text)
                 break # only one name

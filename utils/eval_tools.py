@@ -50,8 +50,8 @@ coco_path = coco_val_dataset_root
 coco_dataset_mean = (104, 117, 123) #val dataset mean
 
 """FOR WEISHI"""
-weishi_val_dataset_root = ''
-weishi_val_imgxml_path = ''
+weishi_val_dataset_root = '/cephfs/share/data/weishi_xh'
+weishi_val_imgxml_path = '/cephfs/share/data/weishi_xh/val_57_0511_new.txt'# be imported and used in train_xx.py file
 weishi_path = weishi_val_dataset_root
 weishi_dataset_mean = (104, 117, 123) #val dataset mean
 
@@ -191,7 +191,7 @@ def do_python_eval(dataset, output_dir='output', use_07=True):
     print('')
 
 #def voc_ap(rec, prec, use_07_metric=true):
-def ap(rec, prec, use_07_metric=True):
+def cal_ap(rec, prec, use_07_metric=True):
     """ ap = voc_ap(rec, prec, [use_07_metric])
     Compute VOC AP given precision and recall.
     If use_07_metric is true, uses the
@@ -359,7 +359,7 @@ def voc_eval(detpath,
         # avoid divide by zero in case the first detection matches a difficult
         # ground truth
         prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
-        ap = ap(rec, prec, use_07_metric)
+        ap = cal_ap(rec, prec, use_07_metric)
     else:
         rec = -1.
         prec = -1.
@@ -485,7 +485,7 @@ def weishi_eval(detpath,
         # avoid divide by zero in case the first detection matches a difficult
         # ground truth
         prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
-        ap = ap(rec, prec, use_07_metric)
+        ap = cal_ap(rec, prec, use_07_metric)
     else:
         rec = -1.
         prec = -1.

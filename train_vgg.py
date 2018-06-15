@@ -120,8 +120,6 @@ def train():
         val_dataset = VOCDetection(root=voc_val_dataset_root, image_sets=[('2007', set_type)],
                                 transform=BaseTransform(300, voc_dataset_mean))
     elif args.dataset == 'WEISHI':
-        if args.dataset_root == VOC_ROOT:
-            parser.error('Must specify dataset_root if specifying dataset')
         if args.jpg_xml_path == '':
             parser.error('Must specify jpg_xml_path if using WEISHI')
         if args.label_name_path == '':
