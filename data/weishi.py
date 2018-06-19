@@ -118,12 +118,12 @@ class WeishiDetection(data.Dataset):
             line = line.strip()
             des = line.split(' ')
             self._annopath[count] = des[1]
+            self._imgpath[count] = des[0]
+            count = count + 1
             tree = ET.parse(des[1]).getroot()
             for fname in tree.findall('filename'):
                 self.ids.append(fname.text)
                 break # only one name
-            self._imgpath[count] = des[0]
-            count = count + 1
         fin.close()
 
     def __getitem__(self, index):

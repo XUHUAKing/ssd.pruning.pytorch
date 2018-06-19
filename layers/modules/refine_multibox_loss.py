@@ -30,11 +30,9 @@ class RefineMultiBoxLoss(nn.Module):
             l: predicted boxes,
             g: ground truth boxes
             N: number of matched default boxes
-        See: https://arxiv.org/pdf/1512.02325.pdf for more details.
     """
 
-
-    def __init__(self, num_classes,overlap_thresh,prior_for_matching,bkg_label,neg_mining,neg_pos,neg_overlap,encode_target,object_score = 0):
+    def __init__(self, num_classes, overlap_thresh, prior_for_matching, bkg_label, neg_mining, neg_pos, neg_overlap, encode_target, object_score = 0):
         super(RefineMultiBoxLoss, self).__init__()
         self.num_classes = num_classes
         self.threshold = overlap_thresh
@@ -47,7 +45,7 @@ class RefineMultiBoxLoss(nn.Module):
         self.object_score = object_score
         self.variance = [0.1,0.2]
 
-    def forward(self, odm_data,priors, targets,arm_data = None,filter_object = False):
+    def forward(self, odm_data, priors, targets, arm_data = None, filter_object = False):
         """Multibox Loss
         Args:
             predictions (tuple): A tuple containing loc preds, conf preds,
@@ -62,9 +60,9 @@ class RefineMultiBoxLoss(nn.Module):
             filter_object: whether filter out the  prediction according to the arm conf score
         """
 
-        loc_data,conf_data = odm_data
+        loc_data, conf_data = odm_data
         if arm_data:
-            arm_loc,arm_conf = arm_data
+            arm_loc, arm_conf = arm_data
         priors = priors.data
         num = loc_data.size(0)
         num_priors = (priors.size(0))
