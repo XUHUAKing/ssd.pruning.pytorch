@@ -1,4 +1,6 @@
-######DONE
+import json
+import pickle
+
 from .config import HOME
 import os
 import os.path as osp
@@ -8,6 +10,10 @@ import torch.utils.data as data
 import torchvision.transforms as transforms
 import cv2
 import numpy as np
+
+
+from utils.pycocotools.coco import COCO
+from utils.pycocotools.cocoeval import COCOeval
 
 #COCO_ROOT = osp.join(HOME, 'data/coco/')
 COCO_ROOT = '/cephfs/share/data/coco_xy/'

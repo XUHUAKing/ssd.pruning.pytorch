@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-from utils.box_utils import match,refine_match, log_sum_exp,decode
+from utils.box_utils import match, refine_match, log_sum_exp, decode
 GPU = False
 if torch.cuda.is_available():
     GPU = True
@@ -48,16 +48,14 @@ class RefineMultiBoxLoss(nn.Module):
     def forward(self, odm_data, priors, targets, arm_data = None, filter_object = False):
         """Multibox Loss
         Args:
-            predictions (tuple): A tuple containing loc preds, conf preds,
-            and prior boxes from SSD net.
-                conf shape: torch.size(batch_size,num_priors,num_classes)
-                loc shape: torch.size(batch_size,num_priors,4)
-                priors shape: torch.size(num_priors,4)
+            odm_data (tuple): A tuple containing loc data, conf data from RefineSSD net
+                conf shape: batch_size, num_priors, num_classes
+                loc shape: batch_size, num_priors, 4
 
-            ground_truth (tensor): Ground truth boxes and labels for a batch,
+            targets (tensor): Ground truth boxes and labels for a batch,
                 shape: [batch_size,num_objs,5] (last idx is the label).
-            arm_data (tuple): arm branch containg arm_loc and arm_conf
-            filter_object: whether filter out the  prediction according to the arm conf score
+            arm_data (tuple): arm branch containing arm_loc and arm_conf
+            filter_object: whether filter out the prediction according to the arm conf score
         """
 
         loc_data, conf_data = odm_data
@@ -90,7 +88,7 @@ class RefineMultiBoxLoss(nn.Module):
             arm_conf_data = arm_conf.data[:,:,1]
             pos = conf_t > 0
             object_score_index = arm_conf_data <= self.object_score
-            pos[object_score_index] = 0
+            pos[object_score_index] = 0 # false
 
         else:
             pos = conf_t > 0
