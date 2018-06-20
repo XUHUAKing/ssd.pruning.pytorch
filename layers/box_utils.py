@@ -1,4 +1,3 @@
-#######DONE
 # -*- coding: utf-8 -*-@
 import torch
 import numpy as np
@@ -77,7 +76,7 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
     corresponding to both confidence and location preds.
     Args:
         threshold: (float) The overlap threshold used when matching boxes.
-        truths: (tensor) Ground truth boxes, Shape: [num_obj, num_priors]. - point_form
+        truths: (tensor) Ground truth boxes, Shape: [num_obj, 4]. - point_form
         priors: (tensor) Prior boxes from priorbox layers, Shape: [n_priors,4]. - center_form
         variances: (tensor) Variances corresponding to each prior coord,
             Shape: [num_priors, 4].
@@ -88,7 +87,7 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
     Return:
         The matched indices corresponding to 1)location and 2)confidence preds.
     """
-    # jaccard index
+    # jaccard index - [num_of_truths/objects, num_of_priors]
     overlaps = jaccard(
         truths,
         point_form(priors)
@@ -103,15 +102,20 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
     best_truth_overlap.squeeze_(0)# and become a 1-D list of argmax
     best_prior_idx.squeeze_(1)# only removde dim == 1 on the second axis
     best_prior_overlap.squeeze_(1)
-    best_truth_overlap.index_fill_(0, best_prior_idx, 2)  # ensure best prior
+    # ensure best prior, mark 2 when two best match each other, so that although overlap < threshold,
+    # for each object, there must be at least 1 prior box can be kept after filtering in order to detect it
+    best_truth_overlap.index_fill_(0, best_prior_idx, 2)
     # TODO refactor: index  best_prior_idx with long tensor
     # ensure every gt matches with its prior of max overlap
-    for j in range(best_prior_idx.size(0)):
-        best_truth_idx[best_prior_idx[j]] = j
-    matches = truths[best_truth_idx]          # Shape: [num_priors,4]
-    conf = labels[best_truth_idx] + 1         # Shape: [num_priors]
+    # first narcg each ground truth to the anchor box with the best overlap score
+    # then match the anchor boxes to any groung truth with overlap higher than 0.5
+    for j in range(best_prior_idx.size(0)):# for each object/gt
+        best_truth_idx[best_prior_idx[j]] = j # use gt->prior to decide prior->gt (i.e. best_truth_idx), update the match ground truth for each prior
+    # best_truth_idx is a list of [num_priors], representing the gt's index inside 'truths' and 'labels' for each prior box
+    matches = truths[best_truth_idx]          # Shape: [num_priors,4] -> for each prior box, what is its corresponding gt box's coordinate
+    conf = labels[best_truth_idx] + 1         # Shape: [num_priors] -> for each prior box, what is its corresponding gt box's label
     conf[best_truth_overlap < threshold] = 0  # label as background
-    loc = encode(matches, priors, variances)
+    loc = encode(matches, priors, variances) # now can compare matched gt's coordinate with prior box itself
     loc_t[idx] = loc    # [num_priors,4] encoded offsets for every default box to learn
     conf_t[idx] = conf  # [num_priors] top class label for each prior
 
@@ -121,7 +125,7 @@ def refine_match(threshold, truths, priors, variances, labels, loc_t, conf_t, id
     corresponding to both confidence and location preds.
     Args:
         threshold: (float) The overlap threshold used when mathing boxes.
-        truths: (tensor) Ground truth boxes, Shape: [num_obj, num_priors].
+        truths: (tensor) Ground truth boxes, Shape: [num_obj, 4].
         priors: (tensor) Prior boxes from priorbox layers, Shape: [n_priors,4].
         variances: (tensor) Variances corresponding to each prior coord,
             Shape: [num_priors, 4].
@@ -150,8 +154,9 @@ def refine_match(threshold, truths, priors, variances, labels, loc_t, conf_t, id
     best_prior_idx.squeeze_(1)
     best_prior_overlap.squeeze_(1)
     best_truth_overlap.index_fill_(0, best_prior_idx, 2)  # ensure best prior
-    # TODO refactor: index  best_prior_idx with long tensor
     # ensure every gt matches with its prior of max overlap
+    # first narcg each ground truth to the anchor box with the best overlap score
+    # then match the anchor boxes to any groung truth with overlap higher than 0.5
     for j in range(best_prior_idx.size(0)):
         best_truth_idx[best_prior_idx[j]] = j
     matches = truths[best_truth_idx]          # Shape: [num_priors,4]

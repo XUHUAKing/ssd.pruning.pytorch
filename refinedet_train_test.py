@@ -165,8 +165,8 @@ optimizer = optim.SGD(net.parameters(), lr=args.lr,
 #optimizer = optim.RMSprop(net.parameters(), lr=args.lr,alpha = 0.9, eps=1e-08,
 #                     momentum=args.momentum, weight_decay=args.weight_decay)
 
-arm_criterion = RefineMultiBoxLoss(2, 0.5, True, 0, True, 3, 0.5, False)
-odm_criterion = RefineMultiBoxLoss(num_classes, 0.5, True, 0, True, 3, 0.5, False,0.01)
+arm_criterion = RefineMultiBoxLoss(2, 0.5, True, 0, True, 3, 0.5, False, 0, args.cuda)
+odm_criterion = RefineMultiBoxLoss(num_classes, 0.5, True, 0, True, 3, 0.5, False, 0.01, args.cuda)
 priorbox = PriorBox(cfg)
 detector = Detect(num_classes,0,cfg,object_score=0.01)
 priors = Variable(priorbox.forward(), volatile=True)
@@ -335,7 +335,7 @@ def train():
 
 
 def adjust_learning_rate(optimizer, gamma, epoch, step_index, iteration, epoch_size):
-    """Sets the learning rate 
+    """Sets the learning rate
     # Adapted from PyTorch Imagenet example:
     # https://github.com/pytorch/examples/blob/master/imagenet/main.py
     """
