@@ -166,7 +166,7 @@ optimizer = optim.SGD(net.parameters(), lr=args.lr,
 #                     momentum=args.momentum, weight_decay=args.weight_decay)
 
 arm_criterion = RefineMultiBoxLoss(2, 0.5, True, 0, True, 3, 0.5, False, 0, args.cuda)
-odm_criterion = RefineMultiBoxLoss(num_classes, 0.5, True, 0, True, 3, 0.5, False, 0.01, args.cuda)
+odm_criterion = RefineMultiBoxLoss(num_classes, 0.5, True, 0, True, 3, 0.5, False, 0.01, args.cuda)# 0.01 -> 0.99 negative confidence threshold
 priorbox = PriorBox(cfg)
 detector = Detect(num_classes,0,cfg,object_score=0.01)
 priors = Variable(priorbox.forward(), volatile=True)
