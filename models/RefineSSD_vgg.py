@@ -235,7 +235,7 @@ class RefineSSD(nn.Module):
             print('Sorry only .pth and .pkl files supported.')
 
 
-def build_net(phase, size=300, num_classes=21, use_refine=False):
+def build_refine(phase, size=300, num_classes=21, use_refine=False):
     if phase != "test" and phase != "train":
         print("ERROR: Phase: " + phase + " not recognized")
         return

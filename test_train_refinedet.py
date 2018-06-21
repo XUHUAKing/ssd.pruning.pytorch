@@ -102,9 +102,9 @@ if args.visdom:
     import visdom
     viz = visdom.Visdom()
 
-from models.RefineSSD_vgg import build_net
+from models.RefineSSD_vgg import build_refine
 cfg = VOC_320
-net = build_net(320, num_classes,use_refine=True)
+net = build_refine(320, num_classes,use_refine=True)
 print(net)
 if not args.resume_net:
     base_weights = torch.load(args.basenet)

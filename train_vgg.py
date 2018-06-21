@@ -204,11 +204,11 @@ def train():
             # reset epoch loss counters
             loc_loss = 0
             conf_loss = 0
-            epoch += 1
 
 #        if iteration in cfg['lr_steps']:
         if iteration != 0 and (iteration % epoch_size == 0):
             adjust_learning_rate(optimizer, args.gamma, epoch)
+            epoch += 1
             # evaluation
             if args.evaluate == True:
                 # load net
