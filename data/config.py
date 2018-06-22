@@ -29,6 +29,21 @@ voc = {
     'name': 'VOC',
 }
 
+voc320 = {
+    'num_classes': 21,
+    'dataset_mean':(104, 117, 123),
+    'max_epoch': 10000,
+    'feature_maps': [40, 20, 10, 5],
+    'min_dim': 320,
+    'steps': [8, 16, 32, 64],
+    'min_sizes': [32, 64, 128, 256],
+    'max_sizes': [],
+    'aspect_ratios': [[2], [2], [2], [2]],
+    'variance': [0.1, 0.2],
+    'clip': True,
+    'name': 'VOC320',
+}
+
 coco = {
     'num_classes': 201,
     #'lr_steps': (280000, 360000, 400000),

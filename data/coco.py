@@ -12,8 +12,8 @@ import cv2
 import numpy as np
 
 
-from utils.pycocotools.coco import COCO
-from utils.pycocotools.cocoeval import COCOeval
+#from utils.pycocotools.coco import COCO
+#from utils.pycocotools.cocoeval import COCOeval
 
 #COCO_ROOT = osp.join(HOME, 'data/coco/')
 COCO_ROOT = '/cephfs/share/data/coco_xy/'

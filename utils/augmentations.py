@@ -1,4 +1,3 @@
-###DONE
 import torch
 from torchvision import transforms
 import cv2
@@ -111,6 +110,7 @@ class Resize(object):
     def __call__(self, image, boxes=None, labels=None):
         image = cv2.resize(image, (self.size,
                                  self.size))
+        # only change from rightmost and downmost, so won't affect coordinates since it start from top left
         return image, boxes, labels
 
 
@@ -218,7 +218,7 @@ class RandomSampleCrop(object):
     Return:
         (img, boxes, classes)
             img (Image): the cropped image
-            boxes (Tensor): the adjusted bounding boxes in pt form
+            boxes (Tensor): the adjusted bounding boxes in pt form (after moving the box left/right/up/down when you crop left/right/up/down)
             labels (Tensor): the class labels for each bbox
     """
     def __init__(self):
@@ -401,6 +401,7 @@ class PhotometricDistort(object):
 
 #final one - integrate all above
 class SSDAugmentation(object):
+    # change the size, you can change the size of image
     def __init__(self, size=300, mean=(104, 117, 123)):
         self.mean = mean
         self.size = size

@@ -113,7 +113,7 @@ def train():
         if args.dataset_root == COCO_ROOT:
             #by default dataset_root is VOC_ROOT, so when you have COCO_ROOT, it means you specify dataset_root, but dataset is still VOC, then error!
             parser.error('Must specify dataset if specifying dataset_root')
-        cfg = voc
+        cfg = voc320 # min_dim inside will force SSDAugmentation change size of picture
         set_name = 'voc'
         dataset = VOCDetection(root=args.dataset_root,
                                transform=SSDAugmentation(cfg['min_dim'],
@@ -150,7 +150,7 @@ def train():
     else:
         vgg_weights = torch.load(args.save_folder + args.basenet)
         print('Loading base network...')
-        ssd_net.vgg.load_state_dict(vgg_weights)
+        ssd_net.base.load_state_dict(vgg_weights)
 
     if args.cuda:
         net = net.cuda()

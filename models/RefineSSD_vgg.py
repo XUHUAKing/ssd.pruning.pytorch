@@ -31,7 +31,7 @@ def vgg(cfg, i=3, batch_norm=False):
 
 
 vgg_base = {
-    '300': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'C', 512, 512, 512, 'M',
+    '320': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'C', 512, 512, 512, 'M',
             512, 512, 512],
 }
 
@@ -61,7 +61,7 @@ class RefineSSD(nn.Module):
         self.use_refine = use_refine
         self.phase = phase
         # SSD network
-        self.base = nn.ModuleList(vgg(vgg_base['300'], 3))
+        self.base = nn.ModuleList(vgg(vgg_base['320'], 3))
         # Layer learns to scale the l2 normalized features from conv4_3
         self.L2Norm_4_3 = L2Norm(512, 10)
         self.L2Norm_5_3 = L2Norm(512, 8)
@@ -190,6 +190,11 @@ class RefineSSD(nn.Module):
             x = F.relu(l(F.relu(u(x) + t, inplace=True)), inplace=True)
             obm_sources.append(x)
         obm_sources.reverse()
+
+        # without TCB, same as arm_sources, but the weights for obm_loc need to change dimensionk
+#        for arm_x in arm_sources:
+#            obm_sources.append(arm_x)# withoutTCB
+
         for (x, l, c) in zip(obm_sources, self.odm_loc, self.odm_conf):
             obm_loc_list.append(l(x).permute(0, 2, 3, 1).contiguous())#permutation
             obm_conf_list.append(c(x).permute(0, 2, 3, 1).contiguous())
@@ -235,11 +240,11 @@ class RefineSSD(nn.Module):
             print('Sorry only .pth and .pkl files supported.')
 
 
-def build_refine(phase, size=300, num_classes=21, use_refine=False):
+def build_refine(phase, size=320, num_classes=21, use_refine=False):
     if phase != "test" and phase != "train":
         print("ERROR: Phase: " + phase + " not recognized")
         return
-    if size != 300:
+    if size != 320:
         print("Error: Sorry only SSD300 and SSD512 is supported currently!")
         return
 

@@ -46,8 +46,9 @@ class PriorBox(object):
                 # aspect_ratio: 1
                 # rel size: sqrt(s_k * s_(k+1))
                 # when k = m, s_k = s_max
-                s_k_prime = sqrt(s_k * (self.max_sizes[k]/self.image_size)) # this is s_max i.e. max scale in fact
-                mean += [cx, cy, s_k_prime, s_k_prime]# because aspect_ratio is 1, so width = height
+                if self.max_sizes:
+                    s_k_prime = sqrt(s_k * (self.max_sizes[k]/self.image_size)) # this is s_max i.e. max scale in fact
+                    mean += [cx, cy, s_k_prime, s_k_prime]# because aspect_ratio is 1, so width = height
 
                 # rest of aspect ratios other than 1 and m, which means 2 ~ m-1
                 for ar in self.aspect_ratios[k]:
