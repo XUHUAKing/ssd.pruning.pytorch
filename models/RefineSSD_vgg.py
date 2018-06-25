@@ -75,28 +75,30 @@ class RefineSSD(nn.Module):
 
         if use_refine:
             # same as SSD - conv layers for coordinate output
-            self.arm_loc = nn.ModuleList([nn.Conv2d(512, 12, kernel_size=3, stride=1, padding=1), \
-                                          nn.Conv2d(512, 12, kernel_size=3, stride=1, padding=1), \
-                                          nn.Conv2d(1024, 12, kernel_size=3, stride=1, padding=1), \
-                                          nn.Conv2d(512, 12, kernel_size=3, stride=1, padding=1), \
+            # by default, 3 prior boxes for each cell, so 3 * 4 offsets
+            self.arm_loc = nn.ModuleList([nn.Conv2d(512, 3*4, kernel_size=3, stride=1, padding=1), \
+                                          nn.Conv2d(512, 3*4, kernel_size=3, stride=1, padding=1), \
+                                          nn.Conv2d(1024, 3*4, kernel_size=3, stride=1, padding=1), \
+                                          nn.Conv2d(512, 3*4, kernel_size=3, stride=1, padding=1), \
                                           ])
             # same as SSD - conv layers for binary class (forground or not) output
-            self.arm_conf = nn.ModuleList([nn.Conv2d(512, 6, kernel_size=3, stride=1, padding=1), \
-                                           nn.Conv2d(512, 6, kernel_size=3, stride=1, padding=1), \
-                                           nn.Conv2d(1024, 6, kernel_size=3, stride=1, padding=1), \
-                                           nn.Conv2d(512, 6, kernel_size=3, stride=1, padding=1), \
+            # by default, 3 prior boxes for each cell, so 3 * 2 binary classes for scores
+            self.arm_conf = nn.ModuleList([nn.Conv2d(512, 3*2, kernel_size=3, stride=1, padding=1), \
+                                           nn.Conv2d(512, 3*2, kernel_size=3, stride=1, padding=1), \
+                                           nn.Conv2d(1024, 3*2, kernel_size=3, stride=1, padding=1), \
+                                           nn.Conv2d(512, 3*2, kernel_size=3, stride=1, padding=1), \
                                            ])
         # for every odm layer, the input from TCB is always 256
-        self.odm_loc = nn.ModuleList([nn.Conv2d(256, 12, kernel_size=3, stride=1, padding=1), \
-                                      nn.Conv2d(256, 12, kernel_size=3, stride=1, padding=1), \
-                                      nn.Conv2d(256, 12, kernel_size=3, stride=1, padding=1), \
-                                      nn.Conv2d(256, 12, kernel_size=3, stride=1, padding=1), \
+        self.odm_loc = nn.ModuleList([nn.Conv2d(256, 3*4, kernel_size=3, stride=1, padding=1), \
+                                      nn.Conv2d(256, 3*4, kernel_size=3, stride=1, padding=1), \
+                                      nn.Conv2d(256, 3*4, kernel_size=3, stride=1, padding=1), \
+                                      nn.Conv2d(256, 3*4, kernel_size=3, stride=1, padding=1), \
                                       ])
-        # 256, 63, 3, 1, 1 originally
-        self.odm_conf = nn.ModuleList([nn.Conv2d(256, 174, kernel_size=3, stride=1, padding=1), \
-                                       nn.Conv2d(256, 174, kernel_size=3, stride=1, padding=1), \
-                                       nn.Conv2d(256, 174, kernel_size=3, stride=1, padding=1), \
-                                       nn.Conv2d(256, 174, kernel_size=3, stride=1, padding=1), \
+        # by default, 3 prior boxes for each cell, so 3 * num_classes for scores
+        self.odm_conf = nn.ModuleList([nn.Conv2d(256, 3*self.num_classes, kernel_size=3, stride=1, padding=1), \
+                                       nn.Conv2d(256, 3*self.num_classes, kernel_size=3, stride=1, padding=1), \
+                                       nn.Conv2d(256, 3*self.num_classes, kernel_size=3, stride=1, padding=1), \
+                                       nn.Conv2d(256, 3*self.num_classes, kernel_size=3, stride=1, padding=1), \
                                        ])
         self.trans_layers = nn.ModuleList([nn.Sequential(nn.Conv2d(512, 256, kernel_size=3, stride=1, padding=1),
                                                          nn.ReLU(inplace=True),

@@ -110,7 +110,6 @@ def train():
                                 transform=BaseTransform(300, coco_dataset_mean))
     elif args.dataset == 'VOC':
         if args.dataset_root == COCO_ROOT:
-            #by default dataset_root is VOC_ROOT, so when you have COCO_ROOT, it means you specify dataset_root, but dataset is still VOC, then error!
             parser.error('Must specify dataset if specifying dataset_root')
         cfg = voc
         set_name = 'voc'
@@ -221,7 +220,7 @@ def train():
                 else:
                     lm = voc_labelmap
                     val_dataset_mean = voc_dataset_mean
-                num_classes = len(lm) + 1                      # +1 for background
+                num_classes = len(lm)# + 1                      # +1 for background
                 val_net = build_ssd('test', 300, num_classes, base='vgg')            # initialize SSD
                 val_net.load_state_dict(ssd_net.state_dict())
                 val_net.eval() # switch to eval mode
