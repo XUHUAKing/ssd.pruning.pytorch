@@ -23,8 +23,8 @@ def center_size(boxes):
     Return:
         boxes: (tensor) Converted xmin, ymin, xmax, ymax form of boxes.
     """
-    return torch.cat((boxes[:, 2:] + boxes[:, :2])/2,  # cx, cy
-                     boxes[:, 2:] - boxes[:, :2], 1)  # w, h
+    return torch.cat([(boxes[:, 2:] + boxes[:, :2])/2,  # cx, cy
+                     boxes[:, 2:] - boxes[:, :2]], 1)  # w, h
 
 
 def intersect(box_a, box_b):
@@ -105,7 +105,6 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
     # ensure best prior, mark 2 when two best match each other, so that although overlap < threshold,
     # for each object, there must be at least 1 prior box can be kept after filtering in order to detect it
     best_truth_overlap.index_fill_(0, best_prior_idx, 2)
-    # TODO refactor: index  best_prior_idx with long tensor
     # ensure every gt matches with its prior of max overlap
     # first narcg each ground truth to the anchor box with the best overlap score
     # then match the anchor boxes to any groung truth with overlap higher than 0.5
@@ -113,7 +112,8 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
         best_truth_idx[best_prior_idx[j]] = j # use gt->prior to decide prior->gt (i.e. best_truth_idx), update the match ground truth for each prior
     # best_truth_idx is a list of [num_priors], representing the gt's index inside 'truths' and 'labels' for each prior box
     matches = truths[best_truth_idx]          # Shape: [num_priors,4] -> for each prior box, what is its corresponding gt box's coordinate
-    conf = labels[best_truth_idx] + 1         # Shape: [num_priors] -> for each prior box, what is its corresponding gt box's label
+    # cannot +1 for 2-class case because 0/1 -> 1/2
+    conf = labels[best_truth_idx] #+ 1         # Shape: [num_priors] -> for each prior box, what is its corresponding gt box's label
     conf[best_truth_overlap < threshold] = 0  # label as background
     loc = encode(matches, priors, variances) # now can compare matched gt's coordinate with prior box itself
     loc_t[idx] = loc    # [num_priors,4] encoded offsets for every default box to learn

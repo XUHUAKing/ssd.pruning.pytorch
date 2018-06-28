@@ -220,7 +220,7 @@ def train():
                 else:
                     lm = voc_labelmap
                     val_dataset_mean = voc_dataset_mean
-                num_classes = len(lm)# + 1                      # +1 for background
+                num_classes = len(lm)                      # +1 for background
                 val_net = build_ssd('test', 300, num_classes, base='vgg')            # initialize SSD
                 val_net.load_state_dict(ssd_net.state_dict())
                 val_net.eval() # switch to eval mode

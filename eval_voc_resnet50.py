@@ -423,7 +423,7 @@ def evaluate_detections(box_list, output_dir, dataset):
 
 if __name__ == '__main__':
     # load net
-    num_classes = len(labelmap)# + 1                      # +1 for background
+    num_classes = len(labelmap)                      # +1 for background
     net = build_ssd('test', 300, num_classes, base='resnet')            # initialize SSD
     net.load_state_dict(torch.load(args.trained_model))
     net.eval()

@@ -29,13 +29,14 @@ voc = {
     'name': 'VOC',
 }
 
+# for refineDet
 voc320 = {
     'num_classes': 21,
     'dataset_mean':(104, 117, 123),
     'max_epoch': 10000,
     'feature_maps': [40, 20, 10, 5],
     'min_dim': 320,
-    'steps': [8, 16, 32, 64],
+    'steps': [8, 16, 32, 64],# image_size/steps[k] = the size for kth feature map
     'min_sizes': [32, 64, 128, 256],
     'max_sizes': [],
     'aspect_ratios': [[2], [2], [2], [2]],

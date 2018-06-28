@@ -88,7 +88,8 @@ class RefineSSD(nn.Module):
                                            nn.Conv2d(1024, 3*2, kernel_size=3, stride=1, padding=1), \
                                            nn.Conv2d(512, 3*2, kernel_size=3, stride=1, padding=1), \
                                            ])
-        # for every odm layer, the input from TCB is always 256
+        # the input from TCB is always 256
+        # without TCB, input channels same as arm
         self.odm_loc = nn.ModuleList([nn.Conv2d(256, 3*4, kernel_size=3, stride=1, padding=1), \
                                       nn.Conv2d(256, 3*4, kernel_size=3, stride=1, padding=1), \
                                       nn.Conv2d(256, 3*4, kernel_size=3, stride=1, padding=1), \
@@ -174,6 +175,8 @@ class RefineSSD(nn.Module):
                 arm_conf_list.append(c(x).permute(0, 2, 3, 1).contiguous()) # permutation
             arm_loc = torch.cat([o.view(o.size(0), -1) for o in arm_loc_list], 1)# flatten
             arm_conf = torch.cat([o.view(o.size(0), -1) for o in arm_conf_list], 1) # flatten
+
+        #  -------------------- TCB begins
         x = self.last_layer_trans(x)
         # for the last TCB, directly go through conv+relu+conv+conv and become obm_source, no need to absort TCB from upper part
         obm_sources.append(x)
@@ -192,10 +195,11 @@ class RefineSSD(nn.Module):
             x = F.relu(l(F.relu(u(x) + t, inplace=True)), inplace=True)
             obm_sources.append(x)
         obm_sources.reverse()
+        # TCB ends
 
-        # without TCB, same as arm_sources, but the weights for obm_loc need to change dimensionk
+        # -------------------- without TCB, same as arm_sources, but the weights for obm_loc need to change dimension
 #        for arm_x in arm_sources:
-#            obm_sources.append(arm_x)# withoutTCB
+#            obm_sources.append(arm_x)
 
         for (x, l, c) in zip(obm_sources, self.odm_loc, self.odm_conf):
             obm_loc_list.append(l(x).permute(0, 2, 3, 1).contiguous())#permutation
@@ -247,7 +251,7 @@ def build_refine(phase, size=320, num_classes=21, use_refine=False):
         print("ERROR: Phase: " + phase + " not recognized")
         return
     if size != 320:
-        print("Error: Sorry only SSD300 and SSD512 is supported currently!")
+        print("Error: Sorry only SSD320 is supported for refineDet currently!")
         return
 
     return RefineSSD(phase, size, num_classes=num_classes, use_refine=use_refine)

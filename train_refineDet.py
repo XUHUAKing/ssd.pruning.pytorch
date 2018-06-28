@@ -94,6 +94,7 @@ if not os.path.exists(args.eval_folder):
 
 
 def train():
+    # train/val dataset object initialization
     if args.dataset == 'COCO':
         if args.dataset_root == VOC_ROOT:
             if not os.path.exists(COCO_ROOT):
@@ -106,19 +107,18 @@ def train():
         dataset = COCODetection(root=args.dataset_root,
                                 transform=SSDAugmentation(cfg['min_dim'],
                                                           MEANS))
-        # only support VOC evaluation now
         val_dataset = COCODetection(root=coco_val_dataset_root,
                                 transform=BaseTransform(300, coco_dataset_mean))
     elif args.dataset == 'VOC':
         if args.dataset_root == COCO_ROOT:
             parser.error('Must specify dataset if specifying dataset_root')
-        cfg = voc320 # min_dim inside will force SSDAugmentation change size of picture
+        cfg = voc320 # min_dim inside will ask SSDAugmentation change size of picture
         set_name = 'voc'
         dataset = VOCDetection(root=args.dataset_root,
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          MEANS))
         val_dataset = VOCDetection(root=voc_val_dataset_root, image_sets=[('2007', set_type)],
-                                transform=BaseTransform(300, voc_dataset_mean))
+                                transform=BaseTransform(320, voc_dataset_mean))
     elif args.dataset == 'WEISHI':
         if args.jpg_xml_path == '':
             parser.error('Must specify jpg_xml_path if using WEISHI')
@@ -136,6 +136,7 @@ def train():
         import visdom
         viz = visdom.Visdom()
 
+    # network set-up
     ssd_net = build_refine('train', cfg['min_dim'], cfg['num_classes'], use_refine = True)
     net = ssd_net
 
@@ -171,9 +172,10 @@ def train():
 
     arm_criterion = RefineMultiBoxLoss(2, 0.5, True, 0, True, 3, 0.5, False, 0, args.cuda)
     odm_criterion = RefineMultiBoxLoss(cfg['num_classes'], 0.5, True, 0, True, 3, 0.5, False, 0.01, args.cuda)# 0.01 -> 0.99 negative confidence threshold
-    priorbox = PriorBox(cfg)# refineDet is different from normal ssd, where the PriorBox is stored inside SSD object
-#    detector = Detect(num_classes,0,cfg,object_score=0.01) # for test_net()
+    # different from normal ssd, where the PriorBox is stored inside SSD object
+    priorbox = PriorBox(cfg)
     priors = Variable(priorbox.forward(), volatile=True)
+#    detector = Detect(num_classes,0,cfg,object_score=0.01) # for test_net()
 
     net.train()
     # loss counters
@@ -237,7 +239,7 @@ def train():
                 else:
                     lm = voc_labelmap
                     val_dataset_mean = voc_dataset_mean
-                num_classes = len(lm) #+ 1                      # +1 for background
+                num_classes = len(lm)                      # +1 for background
                 val_net = build_ssd('test', 300, num_classes, base='vgg')            # initialize SSD
                 val_net.load_state_dict(ssd_net.state_dict())
                 val_net.eval() # switch to eval mode
@@ -260,6 +262,7 @@ def train():
         # backprop
         optimizer.zero_grad()
         #arm branch loss
+        priors = priors.type(type(images.data)) #convert to same datatype
         arm_loss_l,arm_loss_c = arm_criterion((arm_loc,arm_conf),priors,targets)
         #odm branch loss
         odm_loss_l, odm_loss_c = odm_criterion((odm_loc,odm_conf),priors,targets,(arm_loc,arm_conf),False)

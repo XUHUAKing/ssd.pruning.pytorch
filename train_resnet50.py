@@ -211,7 +211,7 @@ def train():
             # evaluation
             if args.evaluate == True:
                 # load net
-                num_classes = len(labelmap) #+ 1                      # +1 for background
+                num_classes = len(labelmap)                      # +1 for background
                 val_net = build_ssd('test', 300, num_classes, base='resnet')            # initialize SSD
                 val_net.load_state_dict(ssd_net.state_dict())
                 val_net.eval() # switch to eval mode
