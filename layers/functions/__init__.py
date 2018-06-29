@@ -3,4 +3,4 @@ from .refine_detection import RefineDetect
 from .prior_box import PriorBox
 
 
-__all__ = ['Detect', 'PriorBox']
+__all__ = ['Detect', 'RefineDetect', 'PriorBox']
