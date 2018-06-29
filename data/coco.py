@@ -12,8 +12,8 @@ import cv2
 import numpy as np
 
 
-from utils.pycocotools.coco import COCO
-from utils.pycocotools.cocoeval import COCOeval
+#from utils.pycocotools.coco import COCO
+#from utils.pycocotools.cocoeval import COCOeval
 
 IMAGES = 'images'
 ANNOTATIONS = 'annotations'

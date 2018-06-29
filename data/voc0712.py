@@ -113,6 +113,7 @@ class VOCDetection(data.Dataset):
         self._imgpath = osp.join('%s', 'JPEGImages', '%s.jpg')
         self.ids = list() # store the names for each image
         for (year, name) in image_sets:#2007/2012 ， trainval
+            self._year = year
             rootpath = osp.join(self.root, 'VOC' + year)
             for line in open(osp.join(rootpath, 'ImageSets', 'Main', name + '.txt')):
                 self.ids.append((rootpath, line.strip()))
@@ -209,8 +210,7 @@ class VOCDetection(data.Dataset):
 
     def _get_voc_results_file_template(self):
         filename = 'comp4_det_test' + '_{:s}.txt'
-        filedir = os.path.join(
-            self.root, 'results', 'VOC' + self._year, 'Main')
+        filedir = os.path.join(self.root, 'results')
         if not os.path.exists(filedir):
             os.makedirs(filedir)
         path = os.path.join(filedir, filename)
@@ -242,7 +242,7 @@ class VOCDetection(data.Dataset):
         annopath = os.path.join(
             rootpath,
             'Annotations',
-            '{:s}.xml')
+            '%s.xml')
         imagesetfile = os.path.join(
             rootpath,
             'ImageSets',

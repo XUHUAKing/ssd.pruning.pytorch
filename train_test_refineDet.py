@@ -178,7 +178,7 @@ def train():
     priorbox = PriorBox(cfg)
     priors = Variable(priorbox.forward(), volatile=True)
     # detector used in test_net for testing
-    detector = RefineDetect(num_classes, 0, cfg, object_score=0.01)
+    detector = RefineDetect(cfg['num_classes'], 0, cfg, object_score=0.01)
 
     net.train()
     # loss counters
@@ -235,11 +235,11 @@ def train():
                 net.eval()
                 top_k = (300, 200)[args.dataset == 'COCO']
                 if args.dataset == 'VOC':
-                    APs,mAP = test_net(args.eval_folder, net, detector, args.cuda, val_dataset,
+                    APs,mAP = test_net(args.eval_folder, net, detector, priors, args.cuda, val_dataset,
                              BaseTransform(net.module.size, voc_dataset_mean),
                              top_k, 320, thresh=0.01)
                 else:#COCO
-                    test_net(args.eval_folder, net, detector, args.cuda, val_dataset,
+                    test_net(args.eval_folder, net, detector, priors, args.cuda, val_dataset,
                                        BaseTransform(net.module.size, coco_dataset_mean),
                                        top_k, 320, thresh=0.01)
 
@@ -310,7 +310,6 @@ def adjust_learning_rate(optimizer, gamma, epoch):
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
-
 def xavier(param):
     init.xavier_uniform(param)
 
@@ -319,7 +318,6 @@ def weights_init(m):
     if isinstance(m, nn.Conv2d):
         xavier(m.weight.data)
         m.bias.data.zero_()
-
 
 def create_vis_plot(_xlabel, _ylabel, _title, _legend):
     return viz.line(
@@ -332,7 +330,6 @@ def create_vis_plot(_xlabel, _ylabel, _title, _legend):
             legend=_legend
         )
     )
-
 
 def update_vis_plot(iteration, loc, conf, window1, window2, update_type,
                     epoch_size=1):
@@ -360,7 +357,7 @@ def update_vis_plot(iteration, loc, conf, window1, window2, update_type,
         transform: BaseTransform
         labelmap: labelmap for different dataset (voc, coco, weishi)
 """
-def test_net(save_folder, net, detector, cuda,
+def test_net(save_folder, net, detector, priors, cuda,
              testset, transform, top_k,
              max_per_image=320, thresh=0.05): # image size is 320 for RefineDet
 
@@ -382,7 +379,9 @@ def test_net(save_folder, net, detector, cuda,
 
     for i in range(num_images):
         img = testset.pull_image(i)
-        x = Variable(transform(img).unsqueeze(0),volatile=True)
+        im, _a, _b = transform(img) # to use our incomplete BaseTransform
+        im = im.transpose((2, 0, 1))# convert rgb, as extension for our incomplete BaseTransform
+        x = Variable(torch.from_numpy(im).unsqueeze(0),volatile=True)
         if cuda:
             x = x.cuda()
 
@@ -392,7 +391,7 @@ def test_net(save_folder, net, detector, cuda,
         boxes, scores = detector.forward((odm_loc,odm_conf), priors,(arm_loc,arm_conf))
         detect_time = _t['im_detect'].toc()
         boxes = boxes[0]
-        scores=scores[0]
+        scores = scores[0]
 
         boxes = boxes.cpu().numpy()
         scores = scores.cpu().numpy()
@@ -414,7 +413,7 @@ def test_net(save_folder, net, detector, cuda,
             c_dets = np.hstack((c_bboxes, c_scores[:, np.newaxis])).astype(
                 np.float32, copy=False)
 
-            keep, _ = nms(c_bboxes, c_scores, 0.45, top_k) #0.45 is nms threshold
+            keep, _ = nms(torch.from_numpy(c_bboxes), torch.from_numpy(c_scores), 0.45, top_k) #0.45 is nms threshold
             keep = keep[:50]
             c_dets = c_dets[keep, :]
             all_boxes[j][i] = c_dets #[class][imageID] = 1 x 5 where 5 is box_coord + score
@@ -450,8 +449,6 @@ def test_net(save_folder, net, detector, cuda,
         if i % 20 == 0:
             print('im_detect: {:d}/{:d} {:.3f}s {:.3f}s'
                   .format(i + 1, num_images, detect_time, nms_time))
-            _t['im_detect'].clear()
-            _t['misc'].clear()
 
     with open(det_file, 'wb') as f:#write the detection results into det_file
         pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
