@@ -1,7 +1,7 @@
 import json
 import pickle
 
-from .config import HOME
+from .config import HOME, COCO_ROOT
 import os
 import os.path as osp
 import sys
@@ -12,11 +12,9 @@ import cv2
 import numpy as np
 
 
-#from utils.pycocotools.coco import COCO
-#from utils.pycocotools.cocoeval import COCOeval
+from utils.pycocotools.coco import COCO
+from utils.pycocotools.cocoeval import COCOeval
 
-#COCO_ROOT = osp.join(HOME, 'data/coco/')
-COCO_ROOT = '/cephfs/share/data/coco_xy/'
 IMAGES = 'images'
 ANNOTATIONS = 'annotations'
 COCO_API = 'PythonAPI'

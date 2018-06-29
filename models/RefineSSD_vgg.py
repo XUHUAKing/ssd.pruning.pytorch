@@ -137,7 +137,7 @@ class RefineSSD(nn.Module):
 
         self.softmax = nn.Softmax()
 
-    def forward(self, x):
+    def forward(self, x, test=False):
         """Applies network layers and ops on input image(s) x.
 
         Args:
@@ -223,7 +223,7 @@ class RefineSSD(nn.Module):
         obm_conf = torch.cat([o.view(o.size(0), -1) for o in obm_conf_list], 1)
 
         # apply multibox head to source layers
-        if self.phase == "test":
+        if test:
             if self.use_refine:
                 output = (
                     arm_loc.view(arm_loc.size(0), -1, 4),  # loc preds

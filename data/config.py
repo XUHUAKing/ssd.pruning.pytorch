@@ -4,6 +4,12 @@ import os.path
 # gets home dir cross platform
 HOME = os.path.expanduser("~")
 
+# VOC_ROOT = osp.join(HOME, "data/VOCdevkit/")
+VOC_ROOT = '/cephfs/share/data/VOCdevkit/'
+
+#COCO_ROOT = osp.join(HOME, 'data/coco/')
+COCO_ROOT = '/cephfs/share/data/coco_xy/'
+
 # for making bounding boxes pretty
 COLORS = ((255, 0, 0, 128), (0, 255, 0, 128), (0, 0, 255, 128),
           (0, 255, 255, 128), (255, 0, 255, 128), (255, 255, 0, 128))
