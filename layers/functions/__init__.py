@@ -1,5 +1,5 @@
 from .detection import Detect
-from .detectionRefine import RefineDetect
+from .refine_detection import RefineDetect
 from .prior_box import PriorBox
 
 
