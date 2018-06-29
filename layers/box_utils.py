@@ -93,7 +93,6 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
         point_form(priors)
     )
     # (Bipartite Matching)
-    # prior means default boxes, num_priors means how many prior boxes in total
     # [1,num_objects] best prior for each ground truth
     best_prior_overlap, best_prior_idx = overlaps.max(1, keepdim=True)
     # [1,num_priors] best ground truth for each prior
@@ -288,9 +287,9 @@ def nms(boxes, scores, overlap=0.5, top_k=200):
         h = torch.clamp(h, min=0.0)
         inter = w*h
         # IoU = i / (area(a) + area(b) - i)
-        rem_areas = torch.index_select(area, 0, idx)  # load remaining areas)
+        rem_areas = torch.index_select(area, 0, idx)  # load remaining areas
         union = (rem_areas - inter) + area[i]
         IoU = inter/union  # store result in iou
-        # keep only elements with an IoU <= overlap
+        # keep only elements with an IoU <= overlap threshold
         idx = idx[IoU.le(overlap)]
     return keep, count

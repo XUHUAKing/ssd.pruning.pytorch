@@ -1,6 +1,5 @@
 import torch
 from torch.autograd import Function
-
 from ..box_utils import decode, center_size
 
 # The Detect() class for RefineDet is named RefineDetect.

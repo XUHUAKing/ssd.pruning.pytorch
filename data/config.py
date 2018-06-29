@@ -6,7 +6,6 @@ HOME = os.path.expanduser("~")
 
 # VOC_ROOT = osp.join(HOME, "data/VOCdevkit/")
 VOC_ROOT = '/cephfs/share/data/VOCdevkit/'
-
 #COCO_ROOT = osp.join(HOME, 'data/coco/')
 COCO_ROOT = '/cephfs/share/data/coco_xy/'
 
