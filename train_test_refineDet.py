@@ -68,8 +68,9 @@ parser.add_argument('--eval_folder', default='evals/',
                     help='Directory for saving eval results')
 parser.add_argument('--confidence_threshold', default=0.01, type=float,
                     help='Detection confidence threshold')
-parser.add_argument('--top_k', default=5, type=int,
-                    help='Further restrict the number of predictions to parse')
+# top_k = (300, 200)[args.dataset == 'COCO']
+#parser.add_argument('--top_k', default=5, type=int,
+#                    help='Further restrict the number of predictions to parse')
 # for WEISHI dataset
 parser.add_argument('--jpg_xml_path', default='',
                     help='Image XML mapping path')
@@ -174,6 +175,7 @@ def train():
 
     arm_criterion = RefineMultiBoxLoss(2, 0.5, True, 0, True, 3, 0.5, False, 0, args.cuda)
     odm_criterion = RefineMultiBoxLoss(cfg['num_classes'], 0.5, True, 0, True, 3, 0.5, False, 0.01, args.cuda)# 0.01 -> 0.99 negative confidence threshold
+
     # different from normal ssd, where the PriorBox is stored inside SSD object
     priorbox = PriorBox(cfg)
     priors = Variable(priorbox.forward(), volatile=True)
@@ -237,11 +239,11 @@ def train():
                 if args.dataset == 'VOC':
                     APs,mAP = test_net(args.eval_folder, net, detector, priors, args.cuda, val_dataset,
                              BaseTransform(net.module.size, voc_dataset_mean),
-                             top_k, 320, thresh=0.01)
+                             top_k, 320, thresh=args.confidence_threshold)
                 else:#COCO
                     test_net(args.eval_folder, net, detector, priors, args.cuda, val_dataset,
-                                       BaseTransform(net.module.size, coco_dataset_mean),
-                                       top_k, 320, thresh=0.01)
+                             BaseTransform(net.module.size, coco_dataset_mean),
+                             top_k, 320, thresh=args.confidence_threshold)
 
                 net.train()
 
@@ -276,9 +278,6 @@ def train():
         if iteration % 10 == 0:
             print('timer: %.4f sec.' % (t1 - t0))
             print('iter ' + repr(iteration) + ' || Loss: %.4f ||' % (loss.data[0]), end=' ')
-#            print('Epoch:' + repr(epoch) + ' || epochiter: ' + repr(iteration % epoch_size) + '/' + repr(epoch_size)
-#                  + '|| Total iter ' +
-#                  repr(iteration))
             print(' || AL: %.4f AC: %.4f OL: %.4f OC: %.4f||' % (
                 mean_arm_loss_l/10, mean_arm_loss_c/10, mean_odm_loss_l/10, mean_odm_loss_c/10))
 
@@ -293,8 +292,7 @@ def train():
 
         if iteration != 0 and iteration % 5000 == 0:
             print('Saving state, iter:', iteration)
-            #whatever dataset you use, the name is COCO
-            torch.save(ssd_net.state_dict(), 'weights/ssd300_COCO_' +
+            torch.save(ssd_net.state_dict(), 'weights/ssd300_refineDet_' +
                        repr(iteration) + '.pth')
     torch.save(ssd_net.state_dict(),
                args.save_folder + '' + args.dataset + '.pth')
@@ -412,7 +410,7 @@ def test_net(save_folder, net, detector, priors, cuda,
             c_scores = scores[inds, j] #filter by inds
             c_dets = np.hstack((c_bboxes, c_scores[:, np.newaxis])).astype(
                 np.float32, copy=False)
-
+            # nms
             keep, _ = nms(torch.from_numpy(c_bboxes), torch.from_numpy(c_scores), 0.45, top_k) #0.45 is nms threshold
             keep = keep[:50]
             c_dets = c_dets[keep, :]
@@ -420,37 +418,22 @@ def test_net(save_folder, net, detector, priors, cuda,
 
         if max_per_image > 0:
             image_scores = np.hstack([all_boxes[j][i][:, -1] for j in range(1,num_classes)])
+            # to keep only max_per_image results
             if len(image_scores) > max_per_image:
+                # get the smallest score for each class for each image if want to keep only max_per_image results
                 image_thresh = np.sort(image_scores)[-max_per_image]
                 for j in range(1, num_classes):
                     keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
                     all_boxes[j][i] = all_boxes[j][i][keep, :]
-        '''
-            dets = detections[0, j, :]#size( ** , 5)
-            mask = dets[:, 0].gt(0.).expand(5, dets.size(0)).t()
-            dets = torch.masked_select(dets, mask).view(-1, 5)
-            if dets.dim() == 0:
-                continue
-            #if dets.size(0) == 0:
-            #    continue
-            boxes = dets[:, 1:]
-            boxes[:, 0] *= w
-            boxes[:, 2] *= w
-            boxes[:, 1] *= h
-            boxes[:, 3] *= h
-            scores = dets[:, 0].cpu().numpy()
-            cls_dets = np.hstack((boxes.cpu().numpy(),
-                                  scores[:, np.newaxis])).astype(np.float32,
-                                                                 copy=False)
-            all_boxes[j][i] = cls_dets #[class][imageID] = 1 x 5 where 5 is box_coord + score
-        '''
+
         nms_time = _t['misc'].toc()
 
         if i % 20 == 0:
             print('im_detect: {:d}/{:d} {:.3f}s {:.3f}s'
                   .format(i + 1, num_images, detect_time, nms_time))
 
-    with open(det_file, 'wb') as f:#write the detection results into det_file
+    #write the detection results into det_file
+    with open(det_file, 'wb') as f:
         pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
 
     print('Evaluating detections')

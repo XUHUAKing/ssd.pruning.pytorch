@@ -45,11 +45,11 @@ class SSD_VGG(nn.Module):
         self.loc = nn.ModuleList(head[0])#loc conv layer
         self.conf = nn.ModuleList(head[1])#conf conv layer
 
-        if phase == 'test':
-            self.softmax = nn.Softmax(dim=-1)
-            self.detect = Detect(num_classes, 0, cfg, 200, 0.01, 0.45)
+        #if phase == 'test':
+        self.softmax = nn.Softmax(dim=-1)
+        self.detect = Detect(num_classes, 0, cfg, 200, 0.01, 0.45)
 
-    def forward(self, x):
+    def forward(self, x, test=False):
         """Applies network layers and ops on input image(s) x.
 
         Args:
@@ -99,7 +99,8 @@ class SSD_VGG(nn.Module):
 
         loc = torch.cat([o.view(o.size(0), -1) for o in loc], 1)
         conf = torch.cat([o.view(o.size(0), -1) for o in conf], 1)
-        if self.phase == "test":
+        #if self.phase == "test":
+        if test:
             output = self.detect(
                 loc.view(loc.size(0), -1, 4),                   # loc preds
                 self.softmax(conf.view(conf.size(0), -1,
@@ -152,11 +153,11 @@ class SSD_RESNET(nn.Module):
         self.loc = nn.ModuleList(head[0])#loc conv layer
         self.conf = nn.ModuleList(head[1])#conf conv layer
 
-        if phase == 'test':
-            self.softmax = nn.Softmax(dim=-1)
-            self.detect = Detect(num_classes, 0, cfg, 200, 0.01, 0.45)
+        #if phase == 'test':
+        self.softmax = nn.Softmax(dim=-1)
+        self.detect = Detect(num_classes, 0, cfg, 200, 0.01, 0.45)
 
-    def forward(self, x):
+    def forward(self, x, test=False):
         """Applies network layers and ops on input image(s) x.
         """
         sources = list()# used for storing output of chosen layers, just concat them together
@@ -190,7 +191,8 @@ class SSD_RESNET(nn.Module):
 
         loc = torch.cat([o.view(o.size(0), -1) for o in loc], 1)
         conf = torch.cat([o.view(o.size(0), -1) for o in conf], 1)
-        if self.phase == "test":
+        #if self.phase == "test":
+        if test:
             output = self.detect(
                 loc.view(loc.size(0), -1, 4),                   # loc preds
                 self.softmax(conf.view(conf.size(0), -1,

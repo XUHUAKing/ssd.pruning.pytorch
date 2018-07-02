@@ -260,7 +260,7 @@ def nms(boxes, scores, overlap=0.5, top_k=200):
 
     # keep = torch.Tensor()
     count = 0
-    while idx.numel() > 0:
+    while idx.numel() > 0: # size() in python, numel() in matlab
         i = idx[-1]  # index of current largest val
         # keep.append(i)
         keep[count] = i

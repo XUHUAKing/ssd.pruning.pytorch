@@ -1,5 +1,4 @@
 from data import *
-from data import VOC_CLASSES as labelmap
 from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
 from models.ssd_vggres import build_ssd
@@ -64,8 +63,9 @@ parser.add_argument('--eval_folder', default='evals/',
                     help='Directory for saving eval results')
 parser.add_argument('--confidence_threshold', default=0.01, type=float,
                     help='Detection confidence threshold')
-parser.add_argument('--top_k', default=5, type=int,
-                    help='Further restrict the number of predictions to parse')
+# top_k = (300, 200)[args.dataset == 'COCO']
+#parser.add_argument('--top_k', default=5, type=int,
+#                    help='Further restrict the number of predictions to parse')
 # for WEISHI dataset
 parser.add_argument('--jpg_xml_path', default='',
                     help='Image XML mapping path')
@@ -102,9 +102,8 @@ def train():
         dataset = COCODetection(root=args.dataset_root,
                                 transform=SSDAugmentation(cfg['min_dim'],
                                                           MEANS))
-        # only support VOC evaluation now
-        val_dataset = VOCDetection(root=val_dataset_root, image_sets=[('2007', set_type)],
-                                transform=BaseTransform(300, dataset_mean))
+        val_dataset = COCODetection(root=coco_val_dataset_root,
+                                transform=BaseTransform(300, coco_dataset_mean))
     elif args.dataset == 'VOC':
         if args.dataset_root == COCO_ROOT:
             parser.error('Must specify dataset if specifying dataset_root')
@@ -112,11 +111,9 @@ def train():
         dataset = VOCDetection(root=args.dataset_root,
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          MEANS))
-        val_dataset = VOCDetection(root=val_dataset_root, image_sets=[('2007', set_type)],
+        val_dataset = VOCDetection(root=val_dataset_root, image_sets=[('2007', 'test')],
                                 transform=BaseTransform(300, dataset_mean))
     elif args.dataset == 'WEISHI':
-        if args.dataset_root == VOC_ROOT:
-            parser.error('Must specify dataset_root if specifying dataset')
         if args.jpg_xml_path == '':
             parser.error('Must specify jpg_xml_path if using WEISHI')
         if args.label_name_path == '':
@@ -125,8 +122,8 @@ def train():
         dataset = WeishiDetection(image_xml_path=args.jpg_xml_path, label_file_path=args.label_name_path,
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          MEANS))
-        val_dataset = VOCDetection(root=val_dataset_root, image_sets=[('2007', set_type)],
-                                transform=BaseTransform(300, dataset_mean))
+        val_dataset = WeishiDetection(image_xml_path=weishi_val_imgxml_path, label_file_path=args.label_name_path,
+                                transform=BaseTransform(300, weishi_dataset_mean))
 
     if args.visdom:
         import visdom
@@ -175,7 +172,6 @@ def train():
     print('Using the specified args:')
     print(args)
 
-
     if args.visdom:
         vis_title = 'SSD.PyTorch on ' + dataset.name
         vis_legend = ['Loc Loss', 'Conf Loss', 'Total Loss']
@@ -204,22 +200,24 @@ def train():
             loc_loss = 0
             conf_loss = 0
 
-        #if iteration in cfg['lr_steps']:
         if iteration != 0 and (iteration % epoch_size == 0):
             adjust_learning_rate(optimizer, args.gamma, epoch)
             epoch += 1
             # evaluation
             if args.evaluate == True:
                 # load net
-                num_classes = len(labelmap)                      # +1 for background
-                val_net = build_ssd('test', 300, num_classes, base='resnet')            # initialize SSD
-                val_net.load_state_dict(ssd_net.state_dict())
-                val_net.eval() # switch to eval mode
-                print("\nStarting the evaluation mode...")
-                test_net(args.eval_folder, val_net, args.cuda, val_dataset,
-                         BaseTransform(val_net.size, dataset_mean), args.top_k, 300,
-                         thresh=args.confidence_threshold)
-                print("Finishing the evaluation mode...")
+                net.eval()
+                top_k = (300, 200)[args.dataset == 'COCO']
+                if args.dataset == 'VOC':
+                    APs,mAP = test_net(args.eval_folder, net, args.cuda, val_dataset,
+                             BaseTransform(net.module.size, voc_dataset_mean),
+                             top_k, 300, thresh=args.confidence_threshold) #voc_dataset_mean is imported from eval_tools
+                else:#COCO
+                    test_net(args.eval_folder, args.cuda, val_dataset,
+                             BaseTransform(net.module.size, coco_dataset_mean),
+                             top_k, 300, thresh=args.confidence_threshold)
+
+                net.train()
 
         if args.cuda:
             images = Variable(images.cuda())
@@ -250,12 +248,10 @@ def train():
 
         if iteration != 0 and iteration % 5000 == 0:
             print('Saving state, iter:', iteration)
-            #whatever dataset you use, the name is COCO
-            torch.save(ssd_net.state_dict(), 'weights/ssd300_VOC_' +
+            torch.save(ssd_net.state_dict(), 'weights/ssd300_resnet_' +
                        repr(iteration) + '.pth')
     torch.save(ssd_net.state_dict(),
                args.save_folder + '' + args.dataset + '.pth')
-
 
 def adjust_learning_rate(optimizer, gamma, epoch):
     """Sets the learning rate to the initial LR decayed by 10 at
@@ -268,7 +264,6 @@ def adjust_learning_rate(optimizer, gamma, epoch):
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
-
 def xavier(param):
     init.xavier_uniform(param)
 
@@ -277,7 +272,6 @@ def weights_init(m):
     if isinstance(m, nn.Conv2d):
         xavier(m.weight.data)
         m.bias.data.zero_()
-
 
 def create_vis_plot(_xlabel, _ylabel, _title, _legend):
     return viz.line(
@@ -309,6 +303,81 @@ def update_vis_plot(iteration, loc, conf, window1, window2, update_type,
             update=True
         )
 
+# test function for resnetSSD
+"""
+    Args:
+        save_folder: the eval results saving folder
+        net: test-type ssd net
+        dataset: validation dataset
+        transform: BaseTransform
+        labelmap: labelmap for different dataset (voc, coco, weishi)
+"""
+def test_net(save_folder, net, cuda,
+             testset, transform, top_k,
+             max_per_image=300, thresh=0.05):
+
+    if not os.path.exists(save_folder):
+        os.mkdir(save_folder)
+
+    num_images = len(testset)
+    num_classes = (21, 81)[args.dataset == 'COCO']
+    # all detections are collected into:
+    #    all_boxes[cls][image] = N x 5 array of detections in
+    #    (x1, y1, x2, y2, score)
+    all_boxes = [[[] for _ in range(num_images)]
+                 for _ in range(len(labelmap)+1)]
+
+    # timers
+    _t = {'im_detect': Timer(), 'misc': Timer()}
+    #output_dir = get_output_dir('ssd300_120000', set_type) #directory storing output results
+    #det_file = os.path.join(output_dir, 'detections.pkl') #file storing output result under output_dir
+    det_file = os.path.join(save_folder, 'detections.pkl')
+
+    for i in range(num_images):
+        im, gt, h, w = testset.pull_item(i)
+
+        x = Variable(im.unsqueeze(0)) #insert a dimension of size one at the dim 0
+        if cuda:
+            x = x.cuda()
+
+        _t['im_detect'].tic()
+        detections = net(x=x, test=True).data # get the detection results
+        detect_time = _t['im_detect'].toc(average=False) #store the detection time
+
+        # skip j = 0, because it's the background class
+        for j in range(1, detections.size(1)): # for every class
+            dets = detections[0, j, :]#size( ** , 5)
+            mask = dets[:, 0].gt(0.).expand(5, dets.size(0)).t()
+            dets = torch.masked_select(dets, mask).view(-1, 5)
+            if dets.dim() == 0:
+                continue
+            #if dets.size(0) == 0:
+            #    continue
+            boxes = dets[:, 1:]
+            boxes[:, 0] *= w
+            boxes[:, 2] *= w
+            boxes[:, 1] *= h
+            boxes[:, 3] *= h
+            scores = dets[:, 0].cpu().numpy()
+            cls_dets = np.hstack((boxes.cpu().numpy(),
+                                  scores[:, np.newaxis])).astype(np.float32,
+                                                                 copy=False)
+            all_boxes[j][i] = cls_dets #[class][imageID] = 1 x 5 where 5 is box_coord + score
+
+        if i % 20 == 0:
+            print('im_detect: {:d}/{:d} {:.3f}s'.format(i + 1,
+                                                        num_images, detect_time)) # nms time is included in detect_time for normal SSD
+
+    #write the detection results into det_file
+    with open(det_file, 'wb') as f:
+        pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
+
+    print('Evaluating detections')
+    if args.dataset == 'VOC':
+        APs,mAP = testset.evaluate_detections(all_boxes, save_folder)
+        return APs,mAP
+    else:
+        testset.evaluate_detections(all_boxes, save_folder)
 
 if __name__ == '__main__':
     train()
