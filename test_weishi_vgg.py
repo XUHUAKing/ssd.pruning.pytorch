@@ -12,7 +12,7 @@ from data import WEISHI_CLASSES as labelmap #WEISHI_CLASSES is a global variable
 from PIL import Image
 from data import BaseTransform, WEISHI_CLASSES
 import torch.utils.data as data
-from models.ssd_vggres import build_ssd
+from models.SSD_vggres import build_ssd
 
 parser = argparse.ArgumentParser(description='Single Shot MultiBox Detection')
 parser.add_argument('--trained_model', default='weights/ssd_300_VOC0712.pth',

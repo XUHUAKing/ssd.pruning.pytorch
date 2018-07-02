@@ -72,7 +72,7 @@ if __name__ == '__main__':
     sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
     from data import BaseTransform, VOC_CLASSES as labelmap
-    from models.ssd_vggres import build_ssd
+    from models.SSD_vggres import build_ssd
 
     net = build_ssd('test', 300, 21, base='vgg')    # initialize SSD
     net.load_state_dict(torch.load(args.weights))
