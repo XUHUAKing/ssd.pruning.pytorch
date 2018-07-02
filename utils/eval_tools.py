@@ -89,28 +89,6 @@ class Timer(object):
         else:
             return self.diff
 
-
-def parse_rec(filename):
-    """ Parse a PASCAL VOC xml file """
-    """ Parse a WEISHI xml file """
-    tree = ET.parse(filename) #filename is the path
-    objects = []
-    for obj in tree.findall('object'):
-        obj_struct = {}
-        obj_struct['name'] = obj.find('name').text
-        obj_struct['pose'] = obj.find('pose').text
-        obj_struct['truncated'] = int(obj.find('truncated').text)
-        obj_struct['difficult'] = int(obj.find('difficult').text)
-        bbox = obj.find('bndbox')
-        obj_struct['bbox'] = [int(bbox.find('xmin').text) - 1,
-                              int(bbox.find('ymin').text) - 1,
-                              int(bbox.find('xmax').text) - 1,
-                              int(bbox.find('ymax').text) - 1]
-        objects.append(obj_struct)
-
-    return objects
-
-
 def get_output_dir(name, phase):
     """Return the directory where experimental artifacts are placed.
     If the directory does not exist, it is created.
