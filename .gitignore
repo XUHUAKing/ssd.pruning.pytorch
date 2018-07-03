@@ -91,7 +91,8 @@ ENV/
 # atom remote-sync package
 .remote-sync.json
 
-# weights
+# weights - this code will disable commit of files under /weights
+# weights/
 
 #DS_Store
 .DS_Store
