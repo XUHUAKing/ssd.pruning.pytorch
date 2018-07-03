@@ -60,7 +60,7 @@ class VOCWeishiAnnotationTransform(object):
         for line in fin.readlines():
             line = line.strip()
             VOC_CLASSES.append(line)
-        fin.close() 
+        fin.close()
         VOC_CLASSES = tuple(VOC_CLASSES)
         self.class_to_ind = class_to_ind or dict(
             zip(VOC_CLASSES, range(len(VOC_CLASSES))))
@@ -130,7 +130,7 @@ class WeishiDetection(data.Dataset):
             self._annopath[count] = des[1]
             self._imgpath[count] = des[0]
             count = count + 1
-        fin.close() 
+        fin.close()
 
     def __getitem__(self, index):
         im, gt, h, w = self.pull_item(index)
@@ -216,6 +216,6 @@ if __name__ == '__main__':
     cfg = weishi
     dataset = WeishiDetection(image_xml_path=args.jpg_xml_path, label_file_path=args.label_name_path,
                            transform=SSDAugmentation(cfg['min_dim'],
-                                                     MEANS))
+                                                     cfg['dataset_mean']))
     for index in range(1000):
         dataset.pull_item(index)

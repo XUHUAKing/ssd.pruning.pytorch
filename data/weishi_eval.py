@@ -122,3 +122,21 @@ def weishi_eval(detpath,
         ap = -1.
 
     return rec, prec, ap
+    
+'''
+def do_python_eval(dataset, output_dir='output', use_07=True):
+    cachedir = os.path.join(dataset_path, 'annotations_cache')
+    aps = []
+    # The PASCAL VOC metric changed in 2010
+    use_07_metric = use_07
+    print('VOC07 metric? ' + ('Yes' if use_07_metric else 'No'))
+    if not os.path.isdir(output_dir):
+        os.mkdir(output_dir)
+    for i, cls in enumerate(labelmap):
+        #filename = get_voc_results_file_template(set_type, cls)
+        filename = get_results_file_template(set_type, cls)
+        if gset == 'weishi':
+            rec, prec, ap = weishi_eval(
+                filename, dataset, cls, cachedir,
+                ovthresh=0.5, use_07_metric=use_07_metric)
+'''

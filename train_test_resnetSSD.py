@@ -14,8 +14,6 @@ import torch.nn.init as init
 import torch.utils.data as data
 import numpy as np
 import argparse
-# for evaluation
-from utils.eval_tools import * #val_dataset_root
 
 #os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 
@@ -101,18 +99,18 @@ def train():
         cfg = coco
         dataset = COCODetection(root=args.dataset_root,
                                 transform=SSDAugmentation(cfg['min_dim'],
-                                                          MEANS))
+                                                          cfg['dataset_mean']))
         val_dataset = COCODetection(root=coco_val_dataset_root,
-                                transform=BaseTransform(300, coco_dataset_mean))
+                                transform=BaseTransform(300, cfg['testset_mean']))
     elif args.dataset == 'VOC':
         if args.dataset_root == COCO_ROOT:
             parser.error('Must specify dataset if specifying dataset_root')
         cfg = voc
         dataset = VOCDetection(root=args.dataset_root,
                                transform=SSDAugmentation(cfg['min_dim'],
-                                                         MEANS))
+                                                         cfg['dataset_mean']))
         val_dataset = VOCDetection(root=val_dataset_root, image_sets=[('2007', 'test')],
-                                transform=BaseTransform(300, dataset_mean))
+                                transform=BaseTransform(300, cfg['testset_mean']))
     elif args.dataset == 'WEISHI':
         if args.jpg_xml_path == '':
             parser.error('Must specify jpg_xml_path if using WEISHI')
@@ -121,9 +119,9 @@ def train():
         cfg = weishi
         dataset = WeishiDetection(image_xml_path=args.jpg_xml_path, label_file_path=args.label_name_path,
                                transform=SSDAugmentation(cfg['min_dim'],
-                                                         MEANS))
+                                                         cfg['dataset_mean']))
         val_dataset = WeishiDetection(image_xml_path=weishi_val_imgxml_path, label_file_path=args.label_name_path,
-                                transform=BaseTransform(300, weishi_dataset_mean))
+                                transform=BaseTransform(300, cfg['testset_mean']))
 
     if args.visdom:
         import visdom
@@ -210,11 +208,11 @@ def train():
                 top_k = (300, 200)[args.dataset == 'COCO']
                 if args.dataset == 'VOC':
                     APs,mAP = test_net(args.eval_folder, net, args.cuda, val_dataset,
-                             BaseTransform(net.module.size, voc_dataset_mean),
-                             top_k, 300, thresh=args.confidence_threshold) #voc_dataset_mean is imported from eval_tools
+                             BaseTransform(net.module.size, cfg['testset_mean']),
+                             top_k, 300, thresh=args.confidence_threshold)
                 else:#COCO
                     test_net(args.eval_folder, args.cuda, val_dataset,
-                             BaseTransform(net.module.size, coco_dataset_mean),
+                             BaseTransform(net.module.size, cfg['testset_mean']),
                              top_k, 300, thresh=args.confidence_threshold)
 
                 net.train()
@@ -310,7 +308,6 @@ def update_vis_plot(iteration, loc, conf, window1, window2, update_type,
         net: test-type ssd net
         dataset: validation dataset
         transform: BaseTransform
-        labelmap: labelmap for different dataset (voc, coco, weishi)
 """
 def test_net(save_folder, net, cuda,
              testset, transform, top_k,
@@ -325,7 +322,7 @@ def test_net(save_folder, net, cuda,
     #    all_boxes[cls][image] = N x 5 array of detections in
     #    (x1, y1, x2, y2, score)
     all_boxes = [[[] for _ in range(num_images)]
-                 for _ in range(len(labelmap)+1)]
+                 for _ in range(num_classes)]
 
     # timers
     _t = {'im_detect': Timer(), 'misc': Timer()}
