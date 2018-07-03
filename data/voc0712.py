@@ -209,6 +209,7 @@ class VOCDetection(data.Dataset):
         return aps, map
 
     def _get_voc_results_file_template(self):
+        # VOCdevkit/VOC2007/results/det_test_aeroplane.txt
         filename = 'comp4_det_test' + '_{:s}.txt'
         filedir = os.path.join(self.root, 'results')
         if not os.path.exists(filedir):
@@ -264,11 +265,13 @@ class VOCDetection(data.Dataset):
             rec, prec, ap = voc_eval(
                 filename, annopath, imagesetfile, cls, cachedir, ovthresh=0.5,
                 use_07_metric=use_07_metric)
+            # AP = AVG(Precision for each of 11 Recalls's precision)
             aps += [ap]
             print('AP for {} = {:.4f}'.format(cls, ap))
             if output_dir is not None:
                 with open(os.path.join(output_dir, cls + '_pr.pkl'), 'wb') as f:
                     pickle.dump({'rec': rec, 'prec': prec, 'ap': ap}, f)
+        # MAP = AVG(AP for each object class)
         print('Mean AP = {:.4f}'.format(np.mean(aps)))
         print('~~~~~~~~')
         print('Results:')

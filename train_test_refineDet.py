@@ -1,4 +1,4 @@
-from data import *
+from data import * # val_dataset_root, dataset_root
 from data import VOC_CLASSES as voc_labelmap
 from data import COCO_CLASSES as coco_labelmap
 from data import WEISHI_CLASSES as weishi_labelmap
@@ -19,8 +19,6 @@ import torch.nn.init as init
 import torch.utils.data as data
 import numpy as np
 import argparse
-# for evaluation
-from utils.eval_tools import * #val_dataset_root
 
 #os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 
@@ -108,9 +106,9 @@ def train():
         set_name = 'coco'
         dataset = COCODetection(root=args.dataset_root,
                                 transform=SSDAugmentation(cfg['min_dim'],
-                                                          MEANS))
+                                                          cfg['dataset_mean']))
         val_dataset = COCODetection(root=coco_val_dataset_root,
-                                transform=BaseTransform(300, coco_dataset_mean))
+                                transform=BaseTransform(300, cfg['testset_mean']))
     elif args.dataset == 'VOC':
         if args.dataset_root == COCO_ROOT:
             parser.error('Must specify dataset if specifying dataset_root')
@@ -118,9 +116,9 @@ def train():
         set_name = 'voc'
         dataset = VOCDetection(root=args.dataset_root,
                                transform=SSDAugmentation(cfg['min_dim'],
-                                                         MEANS))
+                                                         cfg['dataset_mean']))
         val_dataset = VOCDetection(root=voc_val_dataset_root, image_sets=[('2007', 'test')],
-                                transform=BaseTransform(320, voc_dataset_mean))
+                                transform=BaseTransform(320, cfg['testset_mean']))
     elif args.dataset == 'WEISHI':
         if args.jpg_xml_path == '':
             parser.error('Must specify jpg_xml_path if using WEISHI')
@@ -130,9 +128,9 @@ def train():
         set_name = 'weishi'
         dataset = WeishiDetection(image_xml_path=args.jpg_xml_path, label_file_path=args.label_name_path,
                                transform=SSDAugmentation(cfg['min_dim'],
-                                                         MEANS))
+                                                         cfg['dataset_mean']))
         val_dataset = WeishiDetection(image_xml_path=weishi_val_imgxml_path, label_file_path=args.label_name_path,
-                                transform=BaseTransform(300, weishi_dataset_mean))
+                                transform=BaseTransform(300, cfg['testset_mean']))
 
     if args.visdom:
         import visdom
@@ -238,11 +236,11 @@ def train():
                 top_k = (300, 200)[args.dataset == 'COCO']
                 if args.dataset == 'VOC':
                     APs,mAP = test_net(args.eval_folder, net, detector, priors, args.cuda, val_dataset,
-                             BaseTransform(net.module.size, voc_dataset_mean),
+                             BaseTransform(net.module.size, cfg['testset_mean']),
                              top_k, 320, thresh=args.confidence_threshold)
                 else:#COCO
                     test_net(args.eval_folder, net, detector, priors, args.cuda, val_dataset,
-                             BaseTransform(net.module.size, coco_dataset_mean),
+                             BaseTransform(net.module.size, cfg['testset_mean']),
                              top_k, 320, thresh=args.confidence_threshold)
 
                 net.train()
@@ -352,8 +350,8 @@ def update_vis_plot(iteration, loc, conf, window1, window2, update_type,
         save_folder: the eval results saving folder
         net: test-type ssd net
         testset: validation dataset
-        transform: BaseTransform
-        labelmap: labelmap for different dataset (voc, coco, weishi)
+        transform: BaseTransform -- required for refineDet testing,
+                   because it pull_image instead of pull_item (this will transform for you)
 """
 def test_net(save_folder, net, detector, priors, cuda,
              testset, transform, top_k,
