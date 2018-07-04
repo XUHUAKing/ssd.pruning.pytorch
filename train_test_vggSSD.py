@@ -102,7 +102,7 @@ def train():
                                 transform=SSDAugmentation(cfg['min_dim'],
                                                           cfg['dataset_mean']))
         val_dataset = COCODetection(root=coco_val_dataset_root,
-                                transform=BaseTransform(300, cfg['testset_mean']))
+                                transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 300 originally
     elif args.dataset == 'VOC':
         if args.dataset_root == COCO_ROOT:
             parser.error('Must specify dataset if specifying dataset_root')
@@ -111,7 +111,7 @@ def train():
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          cfg['dataset_mean']))
         val_dataset = VOCDetection(root=voc_val_dataset_root, image_sets=[('2007', 'test')],
-                                transform=BaseTransform(300, cfg['testset_mean']))
+                                transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 300 originally
     elif args.dataset == 'WEISHI':
         if args.jpg_xml_path == '':
             parser.error('Must specify jpg_xml_path if using WEISHI')
@@ -122,7 +122,7 @@ def train():
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          cfg['dataset_mean']))
         val_dataset = WeishiDetection(image_xml_path=weishi_val_imgxml_path, label_file_path=args.label_name_path,
-                                transform=BaseTransform(300, cfg['testset_mean']))
+                                transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 300 originally
 
     if args.visdom:
         import visdom
@@ -208,11 +208,11 @@ def train():
                 if args.dataset == 'VOC':
                     APs,mAP = test_net(args.eval_folder, net, args.cuda, val_dataset,
                              BaseTransform(net.module.size, cfg['testset_mean']),
-                             top_k, 300, thresh=args.confidence_threshold)
+                             top_k, cfg['min_dim'], thresh=args.confidence_threshold) # 300 is for cfg['min_dim'] originally
                 else:#COCO
                     test_net(args.eval_folder, args.cuda, val_dataset,
                              BaseTransform(net.module.size, cfg['testset_mean']),
-                             top_k, 300, thresh=args.confidence_threshold)
+                             top_k, cfg['min_dim'], thresh=args.confidence_threshold)
 
                 net.train()
 

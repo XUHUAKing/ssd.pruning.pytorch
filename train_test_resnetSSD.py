@@ -29,7 +29,7 @@ parser.add_argument('--dataset', default='VOC', choices=['VOC', 'COCO'],
                     type=str, help='VOC or COCO')
 parser.add_argument('--dataset_root', default=VOC_ROOT,
                     help='Dataset root directory path')
-parser.add_argument('--basenet', default='vgg16_reducedfc.pth',
+parser.add_argument('--basenet', default='resnet50-19c8e357.pth',
                     help='Pretrained base model')
 parser.add_argument('--batch_size', default=32, type=int,
                     help='Batch size for training')
@@ -102,7 +102,7 @@ def train():
                                 transform=SSDAugmentation(cfg['min_dim'],
                                                           cfg['dataset_mean']))
         val_dataset = COCODetection(root=coco_val_dataset_root,
-                                transform=BaseTransform(300, cfg['testset_mean']))
+                                transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 300 originally
     elif args.dataset == 'VOC':
         if args.dataset_root == COCO_ROOT:
             parser.error('Must specify dataset if specifying dataset_root')
@@ -111,7 +111,7 @@ def train():
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          cfg['dataset_mean']))
         val_dataset = VOCDetection(root=voc_val_dataset_root, image_sets=[('2007', 'test')],
-                                transform=BaseTransform(300, cfg['testset_mean']))
+                                transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 300 originally
     elif args.dataset == 'WEISHI':
         if args.jpg_xml_path == '':
             parser.error('Must specify jpg_xml_path if using WEISHI')
@@ -122,7 +122,7 @@ def train():
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          cfg['dataset_mean']))
         val_dataset = WeishiDetection(image_xml_path=weishi_val_imgxml_path, label_file_path=args.label_name_path,
-                                transform=BaseTransform(300, cfg['testset_mean']))
+                                transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 300 originally
 
     if args.visdom:
         import visdom
@@ -139,10 +139,10 @@ def train():
         print('Resuming training, loading {}...'.format(args.resume))
         ssd_net.load_weights(args.resume)
     else:
-        #vgg_weights = torch.load(args.save_folder + args.basenet)
+        #resnet50_weights = torch.load(args.save_folder + args.basenet)
         print('Loading base network...') # Preloaded.
         #ssd_net.resnet.load_state_dict(torch.load('resnet50-19c8e357.pth'))#(model_zoo.load_url(model_urls['resnet50']))
-        #ssd_net.vgg.load_state_dict(vgg_weights)
+        #ssd_net.resnet.load_state_dict(resnet50_weights)
 
     if args.cuda:
         net = net.cuda()
@@ -210,11 +210,11 @@ def train():
                 if args.dataset == 'VOC':
                     APs,mAP = test_net(args.eval_folder, net, args.cuda, val_dataset,
                              BaseTransform(net.module.size, cfg['testset_mean']),
-                             top_k, 300, thresh=args.confidence_threshold)
+                             top_k, cfg['min_dim'], thresh=args.confidence_threshold)
                 else:#COCO
                     test_net(args.eval_folder, args.cuda, val_dataset,
                              BaseTransform(net.module.size, cfg['testset_mean']),
-                             top_k, 300, thresh=args.confidence_threshold)
+                             top_k, cfg['min_dim'], thresh=args.confidence_threshold)
 
                 net.train()
 

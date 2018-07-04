@@ -39,7 +39,7 @@ voc = {
     'testset_mean':(104, 117, 123),
     'max_epoch': 10000,
     'feature_maps': [38, 19, 10, 5, 3, 1],
-    'min_dim': 300,
+    'min_dim': 300, # size of image
     'steps': [8, 16, 32, 64, 100, 300],
     'min_sizes': [30, 60, 111, 162, 213, 264],
     'max_sizes': [60, 111, 162, 213, 264, 315],
@@ -56,7 +56,7 @@ voc320 = {
     'testset_mean':(104, 117, 123),
     'max_epoch': 10000,
     'feature_maps': [40, 20, 10, 5],
-    'min_dim': 320,
+    'min_dim': 320, # size of image
     'steps': [8, 16, 32, 64],# image_size/steps[k] = the size for kth feature map
     'min_sizes': [32, 64, 128, 256],
     'max_sizes': [],
@@ -74,7 +74,7 @@ coco = {
     'testset_mean':(104, 117, 123),
     'max_epoch': 40000,
     'feature_maps': [38, 19, 10, 5, 3, 1],
-    'min_dim': 300,
+    'min_dim': 300, # size of image
     'steps': [8, 16, 32, 64, 100, 300],
     'min_sizes': [21, 45, 99, 153, 207, 261],
     'max_sizes': [45, 99, 153, 207, 261, 315],
@@ -92,7 +92,7 @@ weishi = {
     'testset_mean':(114, 114, 114),
     'max_epoch': 40000,
     'feature_maps': [38, 19, 10, 5, 3, 1],
-    'min_dim': 300,
+    'min_dim': 300, # size of image
     'steps': [8, 16, 32, 64, 100, 300],
     'min_sizes': [21, 45, 99, 153, 207, 261],
     'max_sizes': [45, 99, 153, 207, 261, 315],

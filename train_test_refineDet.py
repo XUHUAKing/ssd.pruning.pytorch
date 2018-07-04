@@ -28,7 +28,7 @@ def str2bool(v):
 
 
 parser = argparse.ArgumentParser(
-    description='Single Shot MultiBox Detector Training With Pytorch')
+    description='Refinement SSD Training With Pytorch')
 train_set = parser.add_mutually_exclusive_group()
 parser.add_argument('--dataset', default='VOC', choices=['VOC', 'COCO', 'WEISHI'],
                     type=str, help='VOC or COCO or WEISHI')
@@ -104,34 +104,31 @@ def train():
                   "--dataset_root was not specified.")
             args.dataset_root = COCO_ROOT
         cfg = coco
-        set_name = 'coco'
         dataset = COCODetection(root=args.dataset_root,
                                 transform=SSDAugmentation(cfg['min_dim'],
                                                           cfg['dataset_mean']))
         val_dataset = COCODetection(root=coco_val_dataset_root,
-                                transform=BaseTransform(300, cfg['testset_mean']))
+                                transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) #320 originally
     elif args.dataset == 'VOC':
         if args.dataset_root == COCO_ROOT:
             parser.error('Must specify dataset if specifying dataset_root')
         cfg = voc320 # min_dim inside will ask SSDAugmentation change size of picture
-        set_name = 'voc'
         dataset = VOCDetection(root=args.dataset_root,
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          cfg['dataset_mean']))
         val_dataset = VOCDetection(root=voc_val_dataset_root, image_sets=[('2007', 'test')],
-                                transform=BaseTransform(320, cfg['testset_mean']))
+                                transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 320 originally
     elif args.dataset == 'WEISHI':
         if args.jpg_xml_path == '':
             parser.error('Must specify jpg_xml_path if using WEISHI')
         if args.label_name_path == '':
             parser.error('Must specify label_name_path if using WEISHI')
         cfg = weishi
-        set_name = 'weishi'
         dataset = WeishiDetection(image_xml_path=args.jpg_xml_path, label_file_path=args.label_name_path,
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          cfg['dataset_mean']))
         val_dataset = WeishiDetection(image_xml_path=weishi_val_imgxml_path, label_file_path=args.label_name_path,
-                                transform=BaseTransform(300, cfg['testset_mean']))
+                                transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 320 originally
 
     if args.visdom:
         import visdom
@@ -189,7 +186,7 @@ def train():
     print('Loading the dataset...')
 
     epoch_size = len(dataset) // args.batch_size
-    print('Training SSD on:', dataset.name)
+    print('Training refineDet on:', dataset.name)
     print('Using the specified args:')
     print(args)
 
@@ -238,11 +235,11 @@ def train():
                 if args.dataset == 'VOC':
                     APs,mAP = test_net(args.eval_folder, net, detector, priors, args.cuda, val_dataset,
                              BaseTransform(net.module.size, cfg['testset_mean']),
-                             top_k, 320, thresh=args.confidence_threshold)
+                             top_k, cfg['min_dim'], thresh=args.confidence_threshold) # 320 originally for cfg['min_dim']
                 else:#COCO
                     test_net(args.eval_folder, net, detector, priors, args.cuda, val_dataset,
                              BaseTransform(net.module.size, cfg['testset_mean']),
-                             top_k, 320, thresh=args.confidence_threshold)
+                             top_k, cfg['min_dim'], thresh=args.confidence_threshold)
 
                 net.train()
 
