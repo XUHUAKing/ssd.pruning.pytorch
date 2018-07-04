@@ -14,6 +14,7 @@ import torch.nn.init as init
 import torch.utils.data as data
 import numpy as np
 import argparse
+import pickle
 
 #os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 
@@ -109,7 +110,7 @@ def train():
         dataset = VOCDetection(root=args.dataset_root,
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          cfg['dataset_mean']))
-        val_dataset = VOCDetection(root=val_dataset_root, image_sets=[('2007', 'test')],
+        val_dataset = VOCDetection(root=voc_val_dataset_root, image_sets=[('2007', 'test')],
                                 transform=BaseTransform(300, cfg['testset_mean']))
     elif args.dataset == 'WEISHI':
         if args.jpg_xml_path == '':
@@ -127,7 +128,7 @@ def train():
         import visdom
         viz = visdom.Visdom()
 
-    ssd_net = build_ssd('train', cfg['min_dim'], cfg['num_classes'], base='resnet')
+    ssd_net = build_ssd('train', cfg['min_dim'], cfg['num_classes'], base='resnet') # backbone network is resnet
     net = ssd_net
 
     if args.cuda:
@@ -201,7 +202,7 @@ def train():
         if iteration != 0 and (iteration % epoch_size == 0):
             adjust_learning_rate(optimizer, args.gamma, epoch)
             epoch += 1
-            # evaluation
+            # evaluation during training
             if args.evaluate == True:
                 # load net
                 net.eval()
@@ -361,7 +362,7 @@ def test_net(save_folder, net, cuda,
                                                                  copy=False)
             all_boxes[j][i] = cls_dets #[class][imageID] = 1 x 5 where 5 is box_coord + score
 
-        if i % 20 == 0:
+        if i % 100 == 0:
             print('im_detect: {:d}/{:d} {:.3f}s'.format(i + 1,
                                                         num_images, detect_time)) # nms time is included in detect_time for normal SSD
 

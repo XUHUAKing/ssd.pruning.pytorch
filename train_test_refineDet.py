@@ -3,7 +3,7 @@ from data import VOC_CLASSES as voc_labelmap
 from data import COCO_CLASSES as coco_labelmap
 from data import WEISHI_CLASSES as weishi_labelmap
 from utils.augmentations import SSDAugmentation
-from layers import nms # for detection in test_net for RefineDet
+from layers.box_utils import nms # for detection in test_net for RefineDet
 from layers.modules import RefineMultiBoxLoss
 from layers.functions import RefineDetect, PriorBox
 from models.RefineSSD_vgg import build_refine
@@ -19,6 +19,7 @@ import torch.nn.init as init
 import torch.utils.data as data
 import numpy as np
 import argparse
+import pickle
 
 #os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 
@@ -426,7 +427,7 @@ def test_net(save_folder, net, detector, priors, cuda,
 
         nms_time = _t['misc'].toc()
 
-        if i % 20 == 0:
+        if i % 100 == 0:
             print('im_detect: {:d}/{:d} {:.3f}s {:.3f}s'
                   .format(i + 1, num_images, detect_time, nms_time))
 

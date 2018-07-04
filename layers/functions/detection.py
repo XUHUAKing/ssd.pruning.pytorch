@@ -4,7 +4,8 @@ from ..box_utils import decode, nms
 
 
 class Detect(Function):
-    """At test time, Detect is the final layer of SSD.  Decode location preds,
+    """
+    At test time, Detect is the final layer of SSD.  Decode location preds,
     apply non-maximum suppression to location predictions based on conf
     scores and threshold to a top_k number of output predictions for both
     confidence score and locations.

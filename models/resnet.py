@@ -211,7 +211,8 @@ def resnet50(pretrained=False, **kwargs):
     if pretrained:
         # load_url will load the state_dict type
         # last level
-        model.load_state_dict(torch.load('../weights/resnet50-19c8e357.pth'))#(model_zoo.load_url(model_urls['resnet50']))
+        # load will start from HOME directory instead of current directory
+        model.load_state_dict(torch.load('weights/resnet50-19c8e357.pth'))#(model_zoo.load_url(model_urls['resnet50']))
         #model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
     return model
 
