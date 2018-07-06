@@ -49,7 +49,7 @@ voc = {
     'name': 'VOC',
 }
 
-# for refineDet
+# for refineDet: min_dim = 320 when use_tcb, min_dim = 300 when not use_tcb
 voc320 = {
     'num_classes': 21,
     'dataset_mean':(104, 117, 123),

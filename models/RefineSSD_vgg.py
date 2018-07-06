@@ -265,8 +265,8 @@ def build_refine(phase, size=320, num_classes=21, use_refine=False, use_tcb=Fals
     if phase != "test" and phase != "train":
         print("ERROR: Phase: " + phase + " not recognized")
         return
-    if size != 320:
-        print("Error: Sorry only SSD320 is supported for refineDet currently!")
+    if use_tcb = True and size != 320:
+        print("Error: Sorry only SSD320 is supported for refineDet with TCB currently!")
         return
 
     return RefineSSD(phase, size, num_classes=num_classes, use_refine=use_refine, use_tcb=use_tcb)

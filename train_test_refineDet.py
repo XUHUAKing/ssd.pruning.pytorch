@@ -204,6 +204,7 @@ def train():
                                   pin_memory=True)
     # create batch iterator
     batch_iterator = iter(data_loader)
+#    batch_iterator = None
     mean_odm_loss_c = 0
     mean_odm_loss_l = 0
     mean_arm_loss_c = 0
@@ -215,6 +216,15 @@ def train():
         except StopIteration:
             batch_iterator = iter(data_loader)# the dataloader cannot re-initilize
             images, targets = next(batch_iterator)
+        '''
+        if (iteration % epoch_size == 0):
+            # create/update batch iterator at every epoch - re-initilize
+            batch_iterator = iter(data.DataLoader(dataset, args.batch_size,
+                                                  num_workers=args.num_workers,
+                                                  shuffle=True, collate_fn=detection_collate))
+        # load train data
+        images, targets = next(batch_iterator)
+        '''
 
         if args.visdom and iteration != 0 and (iteration % epoch_size == 0):
             # update visdom loss plot
@@ -382,7 +392,7 @@ def test_net(save_folder, net, detector, priors, cuda,
         _t['im_detect'].tic()
         out = net(x=x, test=True)  # forward pass
         arm_loc, arm_conf, odm_loc, odm_conf = out
-        boxes, scores = detector.forward((odm_loc,odm_conf), priors,(arm_loc,arm_conf))
+        boxes, scores = detector.forward((odm_loc,odm_conf), priors, (arm_loc,arm_conf))
         detect_time = _t['im_detect'].toc()
         boxes = boxes[0]
         scores = scores[0]

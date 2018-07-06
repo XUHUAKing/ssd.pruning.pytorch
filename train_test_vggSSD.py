@@ -90,6 +90,7 @@ if not os.path.exists(args.eval_folder):
 
 
 def train():
+    # train/val dataset object initialization
     if args.dataset == 'COCO':
         if args.dataset_root == VOC_ROOT:
             if not os.path.exists(COCO_ROOT):
@@ -128,6 +129,7 @@ def train():
         import visdom
         viz = visdom.Visdom()
 
+    # network set-up
     ssd_net = build_ssd('train', cfg['min_dim'], cfg['num_classes'], base='vgg') # backbone network is vgg
     net = ssd_net
 
