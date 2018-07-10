@@ -1,3 +1,6 @@
+'''
+	Use absolute weights-based criterion for filter pruning
+'''
 import torch
 from torch.autograd import Variable
 from torchvision import models
@@ -9,10 +12,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import dataset
-from prune import *
+from prune_vgg import *
 import argparse
 from operator import itemgetter
-from heapq import nsmallest
+from heapq import nsmallest #heap queue algorithm
 import time
 
 class ModifiedVGG16Model(torch.nn.Module):
@@ -44,7 +47,7 @@ class FilterPrunner:
 	def __init__(self, model):
 		self.model = model
 		self.reset()
-	
+
 	def reset(self):
 		# self.activations = []
 		# self.gradients = []
@@ -75,7 +78,7 @@ class FilterPrunner:
 		values = \
 			torch.sum((activation * grad), dim = 0).\
 				sum(dim=2).sum(dim=3)[0, :, 0, 0].data
-		
+
 		# Normalize the rank by the filter dimensions
 		values = \
 			values / (activation.size(0) * activation.size(2) * activation.size(3))
@@ -122,7 +125,7 @@ class FilterPrunner:
 			for i in filters_to_prune_per_layer[l]:
 				filters_to_prune.append((l, i))
 
-		return filters_to_prune				
+		return filters_to_prune
 
 class PrunningFineTuner_VGG16:
 	def __init__(self, train_path, test_path, model):
@@ -131,7 +134,7 @@ class PrunningFineTuner_VGG16:
 
 		self.model = model
 		self.criterion = torch.nn.CrossEntropyLoss()
-		self.prunner = FilterPrunner(self.model) 
+		self.prunner = FilterPrunner(self.model)
 		self.model.train()
 
 	def test(self):
@@ -145,15 +148,15 @@ class PrunningFineTuner_VGG16:
 			pred = output.data.max(1)[1]
 	 		correct += pred.cpu().eq(label).sum()
 	 		total += label.size(0)
-	 	
+
 	 	print "Accuracy :", float(correct) / total
-	 	
+
 	 	self.model.train()
 
 	def train(self, optimizer = None, epoches = 10):
 		if optimizer is None:
 			optimizer = \
-				optim.SGD(model.classifier.parameters(), 
+				optim.SGD(model.classifier.parameters(),
 					lr=0.0001, momentum=0.9)
 
 		for i in range(epoches):
@@ -161,7 +164,7 @@ class PrunningFineTuner_VGG16:
 			self.train_epoch(optimizer)
 			self.test()
 		print "Finished fine tuning."
-		
+
 
 	def train_batch(self, optimizer, batch, label, rank_filters):
 		self.model.zero_grad()
@@ -182,11 +185,11 @@ class PrunningFineTuner_VGG16:
 		self.prunner.reset()
 
 		self.train_epoch(rank_filters = True)
-		
+
 		self.prunner.normalize_ranks_per_layer()
 
 		return self.prunner.get_prunning_plan(num_filters_to_prune)
-		
+
 	def total_num_filters(self):
 		filters = 0
 		for name, module in self.model.features._modules.items():
@@ -219,7 +222,7 @@ class PrunningFineTuner_VGG16:
 			for layer_index, filter_index in prune_targets:
 				if layer_index not in layers_prunned:
 					layers_prunned[layer_index] = 0
-				layers_prunned[layer_index] = layers_prunned[layer_index] + 1 
+				layers_prunned[layer_index] = layers_prunned[layer_index] + 1
 
 			print "Layers that will be prunned", layers_prunned
 			print "Prunning filters.. "

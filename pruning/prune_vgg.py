@@ -33,6 +33,7 @@ def prune_vgg16_conv_layer(model, layer_index, filter_index):
 		if isinstance(res[1], torch.nn.modules.conv.Conv2d):
 			next_name, next_conv = res
 			break
+        # TODO: weights of Batch Normalization layer need to be removed
 		offset = offset + 1
 
     # the updated conv for current conv, with 1 output channel being pruned
@@ -108,7 +109,7 @@ def prune_vgg16_conv_layer(model, layer_index, filter_index):
 	 		layer_index = layer_index  + 1
 
 	 	if old_linear_layer is None:
-	 		raise BaseException("No linear laye found in classifier")
+	 		raise BaseException("No linear layer found in classifier")
 		params_per_input_channel = old_linear_layer.in_features / conv.out_channels
 
 	 	new_linear_layer = \
@@ -137,7 +138,8 @@ def prune_vgg16_conv_layer(model, layer_index, filter_index):
 		model.classifier = classifier
 
 	return model
-
+'''
+# pruning demo
 if __name__ == '__main__':
 	model = models.vgg16(pretrained=True)
 	model.train()
@@ -145,3 +147,4 @@ if __name__ == '__main__':
 	t0 = time.time()
 	model = prune_conv_layer(model, 28, 10)
 	print "The prunning took", time.time() - t0
+'''
