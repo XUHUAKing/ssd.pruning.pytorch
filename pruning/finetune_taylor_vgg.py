@@ -18,6 +18,7 @@ from operator import itemgetter
 from heapq import nsmallest #heap queue algorithm
 import time
 
+# sample model
 class ModifiedVGG16Model(torch.nn.Module):
 	def __init__(self):
 		super(ModifiedVGG16Model, self).__init__()
