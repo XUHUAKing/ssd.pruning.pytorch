@@ -148,6 +148,8 @@ def get_voc_results_file_template(image_set, cls):
 
 def write_voc_results_file(all_boxes, dataset):
     for cls_ind, cls in enumerate(labelmap):
+        if cls == '__background__':
+            continue
         print('Writing {:s} VOC results file'.format(cls))
         filename = get_voc_results_file_template(set_type, cls)
         with open(filename, 'wt') as f:
@@ -172,6 +174,8 @@ def do_python_eval(output_dir='output', use_07=True):
     if not os.path.isdir(output_dir):
         os.mkdir(output_dir)
     for i, cls in enumerate(labelmap):
+        if cls == '__background__':
+            continue
         filename = get_voc_results_file_template(set_type, cls)
         rec, prec, ap = voc_eval(
            filename, annopath, imgsetpath.format(set_type), cls, cachedir,
@@ -188,11 +192,6 @@ def do_python_eval(output_dir='output', use_07=True):
     print('{:.3f}'.format(np.mean(aps)))
     print('~~~~~~~~')
     print('')
-    print('--------------------------------------------------------------')
-    print('Results computed with the **unofficial** Python eval code.')
-    print('Results should be very close to the official MATLAB eval code.')
-    print('--------------------------------------------------------------')
-
 
 def voc_ap(rec, prec, use_07_metric=True):
     """ ap = voc_ap(rec, prec, [use_07_metric])
@@ -371,7 +370,7 @@ def test_net(save_folder, net, cuda, dataset, transform, top_k,
     #    all_boxes[cls][image] = N x 5 array of detections in
     #    (x1, y1, x2, y2, score)
     all_boxes = [[[] for _ in range(num_images)]
-                 for _ in range(len(labelmap)+1)]
+                 for _ in range(len(labelmap))]
 
     # timers
     _t = {'im_detect': Timer(), 'misc': Timer()}

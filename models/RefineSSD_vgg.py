@@ -63,6 +63,7 @@ class RefineSSD(nn.Module):
         self.use_tcb = use_tcb
         self.phase = phase
         # SSD network
+        # TODO: change the backbone network to ResNet-101
         self.base = nn.ModuleList(vgg(vgg_base['320'], 3))
         # Layer learns to scale the l2 normalized features from conv4_3
         self.L2Norm_4_3 = L2Norm(512, 10)

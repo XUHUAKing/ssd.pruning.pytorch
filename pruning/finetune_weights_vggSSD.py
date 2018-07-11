@@ -1,5 +1,5 @@
 '''
-	Use absolute weights-based criterion for filter pruning
+	Use absolute weights-based criterion for filter pruning on VGG
 '''
 import torch
 from torch.autograd import Variable

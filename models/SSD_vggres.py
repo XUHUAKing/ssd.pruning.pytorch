@@ -49,6 +49,9 @@ class SSD_VGG(nn.Module):
         self.softmax = nn.Softmax(dim=-1)
         self.detect = Detect(num_classes, 0, self.cfg, 200, 0.01, 0.45)
 
+        # store the features (i.e. layers) in nn.ModuleList for pruning
+        self.features = nn.ModuleList(base + extras + head[0] + head[1]) # base layers, extra layers, loc conv, conf conv
+
     def forward(self, x, test=False):
         """Applies network layers and ops on input image(s) x.
 
@@ -156,6 +159,9 @@ class SSD_RESNET(nn.Module):
         #if phase == 'test':
         self.softmax = nn.Softmax(dim=-1)
         self.detect = Detect(num_classes, 0, self.cfg, 200, 0.01, 0.45)
+
+        # store the features (i.e. layers) in nn.ModuleList for pruning
+        self.features = nn.ModuleList(base + extras + head[0] + head[1]) # base layers, extra layers, loc conv, conf conv
 
     def forward(self, x, test=False):
         """Applies network layers and ops on input image(s) x.

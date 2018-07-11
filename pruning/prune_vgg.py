@@ -29,7 +29,7 @@ def prune_vgg16_conv_layer(model, layer_index, filter_index):
 	offset = 1
     # search for the next conv, based on current conv with id = (layer_index, filter_index)
 	while layer_index + offset <  len(model.features._modules.items()):
-		res =  model.features._modules.items()[layer_index+offset]
+		res =  model.features._modules.items()[layer_index+offset] # name, module
 		if isinstance(res[1], torch.nn.modules.conv.Conv2d):
 			next_name, next_conv = res
 			break

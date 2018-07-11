@@ -1,3 +1,4 @@
+# refer to https://github.com/jacobgil/pytorch-pruning/network for different versions of resnet
 import torch
 from torch.autograd import Variable
 from torchvision import models

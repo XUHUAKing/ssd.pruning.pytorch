@@ -1,22 +1,15 @@
 """
-    This file is for model evaluation separately
+    This file is for model evaluation separately for refineDet
 """
-"""Adapted from:
-    @longcw faster_rcnn_pytorch: https://github.com/longcw/faster_rcnn_pytorch
-    @rbgirshick py-faster-rcnn https://github.com/rbgirshick/py-faster-rcnn
-    Licensed under The MIT License [see LICENSE for details]
-"""
+# TODO: evaluation file for refineDet
 
 from __future__ import print_function
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.autograd import Variable
-from data import VOC_ROOT, VOCAnnotationTransform, VOCDetection, BaseTransform
+# from data import VOC_ROOT, VOCAnnotationTransform, VOCDetection, BaseTransform
 from data import VOC_CLASSES as labelmap
-import torch.utils.data as data
-
-from models.SSD_vggres import build_ssd
 
 import sys
 import os
@@ -25,6 +18,13 @@ import argparse
 import numpy as np
 import pickle
 import cv2
+
+# for evaluation on refineDet
+from data import * # val_dataset_root, dataset_root
+from layers.box_utils import nms # for detection in test_net for RefineDet
+from layers.functions import RefineDetect, PriorBox
+from models.RefineSSD_vgg import build_refine
+import torch.utils.data as data
 
 if sys.version_info[0] == 2:
     import xml.etree.cElementTree as ET
@@ -77,7 +77,12 @@ YEAR = '2007'
 devkit_path = args.voc_root + 'VOC' + YEAR
 dataset_mean = (104, 117, 123)
 set_type = 'test'
+cfg = voc320
 
+priorbox = PriorBox(cfg)
+priors = Variable(priorbox.forward(), volatile=True)
+# detector used in test_net for testing
+detector = RefineDetect(cfg['num_classes'], 0, cfg, object_score=0.01)
 
 class Timer(object):
     """A simple timer."""
@@ -138,7 +143,7 @@ def get_output_dir(name, phase):
 
 def get_voc_results_file_template(image_set, cls):
     # VOCdevkit/VOC2007/results/det_test_aeroplane.txt
-    filename = 'det_' + image_set + '_%s.txt' % (cls)
+    filename = 'Refinedet_' + image_set + '_%s.txt' % (cls)
     filedir = os.path.join(devkit_path, 'results')
     if not os.path.exists(filedir):
         os.makedirs(filedir)
@@ -148,6 +153,8 @@ def get_voc_results_file_template(image_set, cls):
 
 def write_voc_results_file(all_boxes, dataset):
     for cls_ind, cls in enumerate(labelmap):
+        if cls == '__background__':
+            continue
         print('Writing {:s} VOC results file'.format(cls))
         filename = get_voc_results_file_template(set_type, cls)
         with open(filename, 'wt') as f:
@@ -172,6 +179,8 @@ def do_python_eval(output_dir='output', use_07=True):
     if not os.path.isdir(output_dir):
         os.mkdir(output_dir)
     for i, cls in enumerate(labelmap):
+        if cls == '__background__':
+            continue
         filename = get_voc_results_file_template(set_type, cls)
         rec, prec, ap = voc_eval(
            filename, annopath, imgsetpath.format(set_type), cls, cachedir,
@@ -188,11 +197,6 @@ def do_python_eval(output_dir='output', use_07=True):
     print('{:.3f}'.format(np.mean(aps)))
     print('~~~~~~~~')
     print('')
-    print('--------------------------------------------------------------')
-    print('Results computed with the **unofficial** Python eval code.')
-    print('Results should be very close to the official MATLAB eval code.')
-    print('--------------------------------------------------------------')
-
 
 def voc_ap(rec, prec, use_07_metric=True):
     """ ap = voc_ap(rec, prec, [use_07_metric])
@@ -363,57 +367,98 @@ cachedir: Directory for caching the annotations
 
     return rec, prec, ap
 
+# test function for RefineDet
+"""
+    Args:
+        save_folder: the eval results saving folder
+        net: test-type ssd net
+        testset: validation dataset
+        transform: BaseTransform -- required for refineDet testing,
+                   because it pull_image instead of pull_item (this will transform for you)
 
-def test_net(save_folder, net, cuda, dataset, transform, top_k,
-             im_size=300, thresh=0.05):
-    num_images = len(dataset)
+"""
+def test_net(save_folder, net, detector, priors, cuda,
+             testset, transform, top_k,
+             max_per_image=320, thresh=0.05): # image size is 320 for RefineDet
+
+    if not os.path.exists(save_folder):
+        os.mkdir(save_folder)
+
+    num_images = len(testset)
+    num_classes = (21, 81)[args.dataset == 'COCO']
     # all detections are collected into:
     #    all_boxes[cls][image] = N x 5 array of detections in
     #    (x1, y1, x2, y2, score)
     all_boxes = [[[] for _ in range(num_images)]
-                 for _ in range(len(labelmap)+1)]
+                 for _ in range(num_classes)]
 
     # timers
     _t = {'im_detect': Timer(), 'misc': Timer()}
+    #file storing output result under output_dir
     output_dir = get_output_dir('ssd300_120000', set_type)
     det_file = os.path.join(output_dir, 'detections.pkl')
 
     for i in range(num_images):
-        im, gt, h, w = dataset.pull_item(i)
-
-        x = Variable(im.unsqueeze(0))
+        img = testset.pull_image(i)
+        im, _a, _b = transform(img) # to use our incomplete BaseTransform
+        im = im.transpose((2, 0, 1))# convert rgb, as extension for our incomplete BaseTransform
+        x = Variable(torch.from_numpy(im).unsqueeze(0),volatile=True)
         if cuda:
             x = x.cuda()
+
         _t['im_detect'].tic()
-        detections = net(x).data
-        detect_time = _t['im_detect'].toc(average=False)
+        out = net(x=x, test=True)  # forward pass
+        arm_loc, arm_conf, odm_loc, odm_conf = out
+        boxes, scores = detector.forward((odm_loc,odm_conf), priors, (arm_loc,arm_conf))
+        detect_time = _t['im_detect'].toc()
+        boxes = boxes[0]
+        scores = scores[0]
 
+        boxes = boxes.cpu().numpy()
+        scores = scores.cpu().numpy()
+        # scale each detection back up to the image
+        scale = torch.Tensor([img.shape[1], img.shape[0],
+                              img.shape[1], img.shape[0]]).cpu().numpy()
+        boxes *= scale
+
+        _t['misc'].tic()
         # skip j = 0, because it's the background class
-        for j in range(1, detections.size(1)):
-            dets = detections[0, j, :]
-            mask = dets[:, 0].gt(0.).expand(5, dets.size(0)).t()
-            dets = torch.masked_select(dets, mask).view(-1, 5)
-            if dets.dim() == 0:
+        for j in range(1, num_classes): # for every class
+            # for particular class, keep those boxes with score greater than threshold
+            inds = np.where(scores[:, j] > thresh)[0]
+            if len(inds) == 0:
+                all_boxes[j][i] = np.empty([0, 5], dtype=np.float32)
                 continue
-            boxes = dets[:, 1:]
-            boxes[:, 0] *= w
-            boxes[:, 2] *= w
-            boxes[:, 1] *= h
-            boxes[:, 3] *= h
-            scores = dets[:, 0].cpu().numpy()
-            cls_dets = np.hstack((boxes.cpu().numpy(),
-                                  scores[:, np.newaxis])).astype(np.float32,
-                                                                 copy=False)
-            all_boxes[j][i] = cls_dets
+            c_bboxes = boxes[inds] #filter by inds
+            c_scores = scores[inds, j] #filter by inds
+            c_dets = np.hstack((c_bboxes, c_scores[:, np.newaxis])).astype(
+                np.float32, copy=False)
+            # nms
+            keep, _ = nms(torch.from_numpy(c_bboxes), torch.from_numpy(c_scores), 0.45, top_k) #0.45 is nms threshold
+            keep = keep[:50]
+            c_dets = c_dets[keep, :]
+            all_boxes[j][i] = c_dets #[class][imageID] = 1 x 5 where 5 is box_coord + score
 
-        print('im_detect: {:d}/{:d} {:.3f}s'.format(i + 1,
-                                                    num_images, detect_time))
+        if max_per_image > 0:
+            image_scores = np.hstack([all_boxes[j][i][:, -1] for j in range(1,num_classes)])
+            # to keep only max_per_image results
+            if len(image_scores) > max_per_image:
+                # get the smallest score for each class for each image if want to keep only max_per_image results
+                image_thresh = np.sort(image_scores)[-max_per_image]
+                for j in range(1, num_classes):
+                    keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
+                    all_boxes[j][i] = all_boxes[j][i][keep, :]
 
+        nms_time = _t['misc'].toc()
+
+        print('im_detect: {:d}/{:d} {:.3f}s {:.3f}s'.format(i + 1, num_images, detect_time, nms_time))
+
+    #write the detection results into det_file
     with open(det_file, 'wb') as f:
         pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
 
     print('Evaluating detections')
-    evaluate_detections(all_boxes, output_dir, dataset)
+    evaluate_detections(all_boxes, output_dir, testset)
 
 
 def evaluate_detections(box_list, output_dir, dataset):
@@ -424,18 +469,19 @@ def evaluate_detections(box_list, output_dir, dataset):
 if __name__ == '__main__':
     # load net
     num_classes = len(labelmap)                      # +1 for background
-    net = build_ssd('test', 300, num_classes, base='resnet')            # initialize SSD
+    net = build_refine('test', 320, num_classes, use_refine = True, use_tcb = False)
     net.load_state_dict(torch.load(args.trained_model))
     net.eval()
     print('Finished loading model!')
     # load data
     dataset = VOCDetection(args.voc_root, [('2007', set_type)],
-                           BaseTransform(300, dataset_mean),
+                           BaseTransform(320, dataset_mean),
                            VOCAnnotationTransform())
     if args.cuda:
         net = net.cuda()
         cudnn.benchmark = True
     # evaluation
-    test_net(args.save_folder, net, args.cuda, dataset,
-             BaseTransform(net.size, dataset_mean), args.top_k, 300,
-             thresh=args.confidence_threshold)
+    APs,mAP = test_net(args.save_folder, net, detector, priors, args.cuda, dataset,
+             BaseTransform(net.size, dataset_mean),
+             args.top_k, 320,
+             thresh=args.confidence_threshold) # 320 originally for cfg['min_dim']

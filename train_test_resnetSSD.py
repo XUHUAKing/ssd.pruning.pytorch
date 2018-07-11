@@ -98,6 +98,7 @@ def train():
                   "--dataset_root was not specified.")
             args.dataset_root = COCO_ROOT
         cfg = coco
+        # TODO: evaluation on COCO dataset
         dataset = COCODetection(root=args.dataset_root,
                                 transform=SSDAugmentation(cfg['min_dim'],
                                                           cfg['dataset_mean']))
@@ -118,6 +119,7 @@ def train():
         if args.label_name_path == '':
             parser.error('Must specify label_name_path if using WEISHI')
         cfg = weishi
+        # TODO: training and evaluation on WEISHI dataset
         dataset = WeishiDetection(image_xml_path=args.jpg_xml_path, label_file_path=args.label_name_path,
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          cfg['dataset_mean']))

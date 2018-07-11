@@ -1,5 +1,5 @@
 '''
-	Use Taylor expansion-based criterion for filter pruning
+	Use Taylor expansion-based criterion for filter pruning on VGG
 '''
 import torch
 from torch.autograd import Variable
@@ -24,7 +24,7 @@ class ModifiedVGG16Model(torch.nn.Module):
 		super(ModifiedVGG16Model, self).__init__()
 
 		model = models.vgg16(pretrained=True)
-		self.features = model.features
+		self.features = model.features # nn.Sequential from make_layers(), embedded attribute in torchvision
 
 		for param in self.features.parameters():
 			param.requires_grad = False
@@ -64,6 +64,8 @@ class FilterPrunner:
 		self.activation_to_layer = {} # match activation index to layer
 
 		activation_index = 0
+		# layer: index number, (name, module): item in _modules
+		# _modules is an embedde attribute in nn.Sequential
 		for layer, (name, module) in enumerate(self.model.features._modules.items()):
 		    x = module(x) # module is the one-by-one nn module
 		    if isinstance(module, torch.nn.modules.conv.Conv2d):
