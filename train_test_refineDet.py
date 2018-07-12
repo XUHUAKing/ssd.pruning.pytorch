@@ -322,6 +322,16 @@ def weights_init(m):
     if isinstance(m, nn.Conv2d):
         xavier(m.weight.data)
         m.bias.data.zero_()
+    '''
+    for key in m.state_dict():
+        if key.split('.')[-1] == 'weight':
+            if 'conv' in key:
+                init.kaiming_normal(m.state_dict()[key], mode='fan_out')
+            if 'bn' in key:
+                m.state_dict()[key][...] = 1
+        elif key.split('.')[-1] == 'bias':
+            m.state_dict()[key][...] = 0
+    '''
 
 def create_vis_plot(_xlabel, _ylabel, _title, _legend):
     return viz.line(

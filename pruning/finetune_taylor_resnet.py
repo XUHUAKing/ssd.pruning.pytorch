@@ -1,3 +1,7 @@
+'''
+	This file is a skeleton for higher-level network pruning
+	Use Taylor expansion-based criterion for filter pruning on ResNet18
+'''
 import torch
 from torch.autograd import Variable
 import torchvision.models as models

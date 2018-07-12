@@ -37,7 +37,7 @@ class SSD_VGG(nn.Module):
         self.size = size
 
         # SSD network
-        self.vgg = nn.ModuleList(base)
+        self.base = nn.ModuleList(base)
         # Layer learns to scale the l2 normalized features from conv4_3
         self.L2Norm = L2Norm(512, 20)
         self.extras = nn.ModuleList(extras)
@@ -48,9 +48,6 @@ class SSD_VGG(nn.Module):
         #if phase == 'test':
         self.softmax = nn.Softmax(dim=-1)
         self.detect = Detect(num_classes, 0, self.cfg, 200, 0.01, 0.45)
-
-        # store the features (i.e. layers) in nn.ModuleList for pruning
-        self.features = nn.ModuleList(base + extras + head[0] + head[1]) # base layers, extra layers, loc conv, conf conv
 
     def forward(self, x, test=False):
         """Applies network layers and ops on input image(s) x.
@@ -78,14 +75,14 @@ class SSD_VGG(nn.Module):
 
         # apply vgg up to conv4_3 relu
         for k in range(23):
-            x = self.vgg[k](x)# use vgg[k] as a function because it is a layer
+            x = self.base[k](x)# use vgg[k] as a function because it is a layer
 
         s = self.L2Norm(x)#just a kind of normalization
         sources.append(s)
 
         # apply vgg up to fc7
-        for k in range(23, len(self.vgg)):
-            x = self.vgg[k](x)
+        for k in range(23, len(self.base)):
+            x = self.base[k](x)
         sources.append(x)
 
         # apply extra layers and cache source layer outputs
@@ -147,8 +144,7 @@ class SSD_RESNET(nn.Module):
         self.size = size
 
         # SSD network
-        #self.vgg = nn.ModuleList(base)
-        self.resnet = nn.ModuleList(base)# ModuleList allows a list of nn.Module so that you can get it by index one by one
+        self.base = nn.ModuleList(base)# ModuleList allows a list of nn.Module so that you can get it by index one by one
         # Layer learns to scale the l2 normalized features from conv4_3
         self.L2Norm = L2Norm(512, 20)
         self.extras = nn.ModuleList(extras)
@@ -172,15 +168,15 @@ class SSD_RESNET(nn.Module):
 
         # apply resnet up to the last bottlneck module in stage 2
         for k in range(11):
-            x = self.resnet[k](x)# use resnet[k] as a function because it is a module
+            x = self.base[k](x)# use resnet[k] as a function because it is a module
 
         s = self.L2Norm(x)
         sources.append(s)
 
         # apply resnet up to the last module avg pool, right before the fc1000
         # minus 1 to exclude fc1000 layer
-        for k in range(11, len(self.resnet)-1):
-            x = self.resnet[k](x)
+        for k in range(11, len(self.base)-1):
+            x = self.base[k](x)
         sources.append(x)
 
         # apply extra layers and cache source layer outputs

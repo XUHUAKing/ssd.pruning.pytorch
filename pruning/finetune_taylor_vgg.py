@@ -1,5 +1,6 @@
 '''
-	Use Taylor expansion-based criterion for filter pruning on VGG
+	This file is a skeleton for higher-level network pruning
+	Use Taylor expansion-based criterion for filter pruning on VGG16
 '''
 import torch
 from torch.autograd import Variable
@@ -24,8 +25,10 @@ class ModifiedVGG16Model(torch.nn.Module):
 		super(ModifiedVGG16Model, self).__init__()
 
 		model = models.vgg16(pretrained=True)
-		self.features = model.features # nn.Sequential from make_layers(), embedded attribute in torchvision
+		# features: nn.Sequential from make_layers(), embedded attribute in torchvision vgg
+		self.features = model.features
 
+		# return an iterator over module parameters
 		for param in self.features.parameters():
 			param.requires_grad = False
 
@@ -65,12 +68,16 @@ class FilterPrunner:
 
 		activation_index = 0
 		# layer: index number, (name, module): item in _modules
-		# _modules is an embedde attribute in nn.Sequential
+		# _modules is an embedded attribute in Module class, with type of OrderDict(), name is key, module is content
 		for layer, (name, module) in enumerate(self.model.features._modules.items()):
 		    x = module(x) # module is the one-by-one nn module
 		    if isinstance(module, torch.nn.modules.conv.Conv2d):
-		    	x.register_hook(self.compute_rank) # store the intermediate gradient
-		        self.activations.append(x) # store the intermediate ctivation map
+				# store the intermediate gradient
+		    	x.register_hook(self.compute_rank)
+				# store the intermediate activation map
+				# the activation is result AFTER going through the current layer (i.e. filter)
+		        self.activations.append(x)
+				# store the layer index in entire network
 		        self.activation_to_layer[activation_index] = layer
 		        activation_index += 1
 

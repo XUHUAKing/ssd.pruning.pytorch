@@ -1,9 +1,9 @@
 '''
-	Use absolute weights-based criterion for filter pruning on VGG
+	Use absolute weights-based criterion for filter pruning on vggSSD
 '''
 import torch
 from torch.autograd import Variable
-from torchvision import models
+#from torchvision import models
 import cv2
 import sys
 import numpy as np
@@ -11,38 +11,21 @@ import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import dataset
+#import dataset
 from prune_vgg import *
 import argparse
 from operator import itemgetter
 from heapq import nsmallest #heap queue algorithm
 import time
 
-class ModifiedVGG16Model(torch.nn.Module):
-	def __init__(self):
-		super(ModifiedVGG16Model, self).__init__()
+from data import *
+import torch.utils.data as data
+from utils.augmentations import SSDAugmentation
+from layers.modules import MultiBoxLoss
+from models.SSD_vggres import build_ssd
 
-		model = models.vgg16(pretrained=True)
-		self.features = model.features
-
-		for param in self.features.parameters():
-			param.requires_grad = False
-
-		self.classifier = nn.Sequential(
-		    nn.Dropout(),
-		    nn.Linear(25088, 4096),
-		    nn.ReLU(inplace=True),
-		    nn.Dropout(),
-		    nn.Linear(4096, 4096),
-		    nn.ReLU(inplace=True),
-		    nn.Linear(4096, 2))
-
-	def forward(self, x):
-		x = self.features(x)
-		x = x.view(x.size(0), -1)
-		x = self.classifier(x)
-		return x
-
+# SSD_VGG and SSD_VGG.base
+# only prune base net
 class FilterPrunner:
 	def __init__(self, model):
 		self.model = model
@@ -54,61 +37,56 @@ class FilterPrunner:
 		# self.grad_index = 0
 		# self.activation_to_layer = {}
 		self.filter_ranks = {}
-
+	'''
+	Do one-time forward propagation, prepare useful info. for
+	1. compute_rank()
+	2. backprop
+	3. training and param update
+	@return: output of forward
+	'''
 	def forward(self, x):
-		self.activations = []
-		self.gradients = []
-		self.grad_index = 0
-		self.activation_to_layer = {}
+		self.weights = [] # store the absolute weights for filter
+		self.weight_to_layer = {} # dict matching weight index to layer index
 
-		activation_index = 0
-		for layer, (name, module) in enumerate(self.model.features._modules.items()):
-		    x = module(x)
-		    if isinstance(module, torch.nn.modules.conv.Conv2d):
-		    	x.register_hook(self.compute_rank)
-		        self.activations.append(x)
-		        self.activation_to_layer[activation_index] = layer
-		        activation_index += 1
+		weight_index = 0
+		# the layer excluded from pruning due to existence of forking
+		fork_indices = [21, len(self.model.base)-2]
+		for layer, (name, module) in enumerate(self.model.base._modules.items()):
+		    if isinstance(module, torch.nn.modules.conv.Conv2d) and (layer not in fork_indices):
+				print(module.weight.data.size()) # batch_size x out_channels x 3 x 3 ?
 
-		return self.model.classifier(x.view(x.size(0), -1))
+				abs_wgt = torch.abs(module.weight.data) # batch_size x out_channels x 3 x 3 ?
+		        self.weights.append(abs_wgt)
+		        self.weight_to_layer[weight_index] = layer
+		        weight_index += 1
 
-	def compute_rank(self, grad):
-		activation_index = len(self.activations) - self.grad_index - 1
-		activation = self.activations[activation_index]
-		values = \
-			torch.sum((activation * grad), dim = 0).\
-				sum(dim=2).sum(dim=3)[0, :, 0, 0].data
+				# compute the rank and store into self.filter_ranks
+				values = \
+					torch.sum(abs_wgt, dim = 0).\
+						sum(dim=2).sum(dim=3)[0, :, 0, 0].data
 
-		# Normalize the rank by the filter dimensions
-		values = \
-			values / (activation.size(0) * activation.size(2) * activation.size(3))
+				# Normalize the sum of weight by the batch_size
+				values = values / abs_wgt.size(0) # (filter_number for this layer, 1)
 
-		if activation_index not in self.filter_ranks:
-			self.filter_ranks[activation_index] = \
-				torch.FloatTensor(activation.size(1)).zero_().cuda()
+				if weight_index not in self.filter_ranks:
+					self.filter_ranks[weight_index] = \
+						torch.FloatTensor(abs_wgt.size(1)).zero_().cuda()
 
-		self.filter_ranks[activation_index] += values
-		self.grad_index += 1
+				self.filter_ranks[weight_index] += values # filter_ranks are 0 initially, size = (num_filter, 1)
+
+		return self.model(x) # output
 
 	def lowest_ranking_filters(self, num):
 		data = []
-		for i in sorted(self.filter_ranks.keys()):
-			for j in range(self.filter_ranks[i].size(0)):
+		for i in sorted(self.filter_ranks.keys()): # for one layer
+			for j in range(self.filter_ranks[i].size(0)): # num_filter for this layer
 				data.append((self.activation_to_layer[i], j, self.filter_ranks[i][j]))
 
-		return nsmallest(num, data, itemgetter(2))
-
-	def normalize_ranks_per_layer(self):
-		for i in self.filter_ranks:
-			v = torch.abs(self.filter_ranks[i])
-			v = v / np.sqrt(torch.sum(v * v))
-			self.filter_ranks[i] = v.cpu()
+		return nsmallest(num, data, itemgetter(2)) # (l, f, _)
 
 	def get_prunning_plan(self, num_filters_to_prune):
 		filters_to_prune = self.lowest_ranking_filters(num_filters_to_prune)
 
-		# After each of the k filters are prunned,
-		# the filter index of the next filters change since the model is smaller.
 		filters_to_prune_per_layer = {}
 		for (l, f, _) in filters_to_prune:
 			if l not in filters_to_prune_per_layer:
@@ -117,6 +95,8 @@ class FilterPrunner:
 
 		for l in filters_to_prune_per_layer:
 			filters_to_prune_per_layer[l] = sorted(filters_to_prune_per_layer[l])
+			# After each of the k filters are prunned,
+			# the filter index of the next filters change since the model is smaller.
 			for i in range(len(filters_to_prune_per_layer[l])):
 				filters_to_prune_per_layer[l][i] = filters_to_prune_per_layer[l][i] - i
 
@@ -127,56 +107,52 @@ class FilterPrunner:
 
 		return filters_to_prune
 
-class PrunningFineTuner_VGG16:
-	def __init__(self, train_path, test_path, model):
-		self.train_data_loader = dataset.loader(train_path)
-		self.test_data_loader = dataset.test_loader(test_path)
+class PrunningFineTuner_vggSSD:
+	def __init__(self, train_loader, criterion, model):
+		self.train_data_loader = train_loader
 
 		self.model = model
-		self.criterion = torch.nn.CrossEntropyLoss()
+		self.criterion = criterion
 		self.prunner = FilterPrunner(self.model)
 		self.model.train()
 
-	def test(self):
-		self.model.eval()
-		correct = 0
-		total = 0
+	def test(self, i):
+		print("Saving pruned model at epoch/iteration {}...".format(i))
+        torch.save(self.model.state_dict(), 'prunes/model_for_'+ repr(i) +'_test.pth')
+		print("Model saved, please use eval_.py for evaluating.")
 
-		for i, (batch, label) in enumerate(self.test_data_loader):
-			batch = batch.cuda()
-			output = model(Variable(batch))
-			pred = output.data.max(1)[1]
-	 		correct += pred.cpu().eq(label).sum()
-	 		total += label.size(0)
-
-	 	print "Accuracy :", float(correct) / total
-
-	 	self.model.train()
-
+	# epoches: fine tuning for this epoches
 	def train(self, optimizer = None, epoches = 10):
 		if optimizer is None:
 			optimizer = \
-				optim.SGD(model.classifier.parameters(),
-					lr=0.0001, momentum=0.9)
+				optim.SGD(self.model.parameters(),
+					lr=0.0001, momentum=0.9, weight_decay=5e-4)
 
 		for i in range(epoches):
-			print "Epoch: ", i
-			self.train_epoch(optimizer)
-			self.test()
+			print "FineTune... Epoch: ", i
+			self.train_epoch(optimizer) # no need for rank_filters
+			self.test(i)
 		print "Finished fine tuning."
 
-
+	# batch: images, label: targets
 	def train_batch(self, optimizer, batch, label, rank_filters):
-		self.model.zero_grad()
+		# set gradients of all model parameters to zero
+		self.model.zero_grad() # same as optimizer.zero_grad() when SGD() get model.parameters
 		input = Variable(batch)
 
+		# just for ranking the filter, not for params update, use self.prunner for output
 		if rank_filters:
 			output = self.prunner.forward(input)
-			self.criterion(output, Variable(label)).backward()
+	        loss_l, loss_c = self.criterion(output, Variable(label))
+	        loss = loss_l + loss_c
+	        loss.backward()
 		else:
-			self.criterion(self.model(input), Variable(label)).backward()
-			optimizer.step()
+	        loss_l, loss_c = self.criterion(self.model(input), Variable(label))
+	        loss = loss_l + loss_c
+	        loss.backward()
+			optimizer.step() # update params
 
+	# train for one epoch, so the data_loader will not pop StopIteration error
 	def train_epoch(self, optimizer = None, rank_filters = False):
 		for batch, label in self.train_data_loader:
 			self.train_batch(optimizer, batch.cuda(), label.cuda(), rank_filters)
@@ -184,38 +160,40 @@ class PrunningFineTuner_VGG16:
 	def get_candidates_to_prune(self, num_filters_to_prune):
 		self.prunner.reset()
 
-		self.train_epoch(rank_filters = True)
+		self.train_epoch(rank_filters = True) # need to rank_filters
 
-		self.prunner.normalize_ranks_per_layer()
+		# self.prunner.normalize_ranks_per_layer()
 
 		return self.prunner.get_prunning_plan(num_filters_to_prune)
 
 	def total_num_filters(self):
 		filters = 0
-		for name, module in self.model.features._modules.items():
-			if isinstance(module, torch.nn.modules.conv.Conv2d):
+		for name, module in self.model.base._modules.items():
+			if isinstance(module, torch.nn.modules.conv.Conv2d) and (layer not in fork_indices):
 				filters = filters + module.out_channels
 		return filters
 
 	def prune(self):
 		#Get the accuracy before prunning
-		self.test()
+		self.test(00)
 
 		self.model.train()
 
 		#Make sure all the layers are trainable
-		for param in self.model.features.parameters():
+		for param in self.model.base.parameters():
 			param.requires_grad = True
 
 		number_of_filters = self.total_num_filters()
 		num_filters_to_prune_per_iteration = 512
-		iterations = int(float(number_of_filters) / num_filters_to_prune_per_iteration)
+		iterations = int(float(number_of_filters) / num_filters_to_prune_per_iteration) # the total iterations for cutting 100% all
 
-		iterations = int(iterations * 2.0 / 3)
+		#iterations = int(iterations * 2.0 / 3)
+		iterations = int(iterations * 2.0 / 10)
 
-		print "Number of prunning iterations to reduce 67% filters", iterations
+		#print "Number of prunning iterations to reduce 67% filters", iterations
+		print "Number of prunning iterations to reduce 20% filters", iterations
 
-		for _ in range(iterations):
+		for iteration in range(iterations):
 			print "Ranking filters.. "
 			prune_targets = self.get_candidates_to_prune(num_filters_to_prune_per_iteration)
 			layers_prunned = {}
@@ -228,13 +206,13 @@ class PrunningFineTuner_VGG16:
 			print "Prunning filters.. "
 			model = self.model.cpu()
 			for layer_index, filter_index in prune_targets:
-				model = prune_vgg16_conv_layer(model, layer_index, filter_index)
+				model = prune_vggbase_conv_layer(model, layer_index, filter_index)
 
 			self.model = model.cuda()
 
 			message = str(100*float(self.total_num_filters()) / number_of_filters) + "%"
 			print "Filters prunned", str(message)
-			self.test()
+			self.test(iteration)
 			print "Fine tuning to recover from prunning iteration."
 			optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
 			self.train(optimizer, epoches = 10)
@@ -242,14 +220,17 @@ class PrunningFineTuner_VGG16:
 
 		print "Finished. Going to fine tune the model a bit more"
 		self.train(optimizer, epoches = 15)
-		torch.save(model, "model_prunned")
+        print('Saving pruned model...')
+        torch.save(self.model.state_dict(), 'prunes/model_prunned.pth')
+		#torch.save(model, "model_prunned")
 
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--train", dest="train", action="store_true")
     parser.add_argument("--prune", dest="prune", action="store_true")
-    parser.add_argument("--train_path", type = str, default = "train")
-    parser.add_argument("--test_path", type = str, default = "test")
+    parser.add_argument("--prune_folder", default = "prunes/")
+    parser.add_argument("--trained_model", default = "prunes/model_trained.pth")
+	parser.add_argument('--dataset_root', default=VOC_ROOT)
     parser.set_defaults(train=False)
     parser.set_defaults(prune=False)
     args = parser.parse_args()
@@ -257,17 +238,37 @@ def get_args():
 
 if __name__ == '__main__':
 	args = get_args()
+	cfg = voc
+	# store pruning models
+	if not os.path.exists(args.prune_folder):
+	    os.mkdir(args.prune_folder)
 
 	if args.train:
-		model = ModifiedVGG16Model().cuda()
+    	model = build_ssd('train', cfg['min_dim'], cfg['num_classes'], base='vgg').cuda()
 	elif args.prune:
-		model = torch.load("model").cuda()
+		#model = torch.load("model").cuda()
+    	model = build_ssd('train', cfg['min_dim'], cfg['num_classes'], base='vgg').cuda()
+	    model.load_state_dict(torch.load(args.trained_model))
 
-	fine_tuner = PrunningFineTuner_VGG16(args.train_path, args.test_path, model)
+
+    dataset = VOCDetection(root=args.dataset_root,
+                           transform=SSDAugmentation(cfg['min_dim'],
+                                                     cfg['dataset_mean']))
+    data_loader = data.DataLoader(dataset, 32,
+                                  num_workers=4,
+                                  shuffle=True, collate_fn=detection_collate,
+                                  pin_memory=True)
+
+    criterion = MultiBoxLoss(cfg['num_classes'], 0.5, True, 0, True, 3, 0.5,
+                             False, args.cuda)
+
+	fine_tuner = PrunningFineTuner_vggSSD(data_loader, criterion, model)
 
 	if args.train:
 		fine_tuner.train(epoches = 20)
-		torch.save(model, "model")
+        print('Saving trained model...')
+        torch.save(self.model.state_dict(), 'prunes/model_trained.pth')
+		#torch.save(model, "model")
 
 	elif args.prune:
 		fine_tuner.prune()

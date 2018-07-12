@@ -11,7 +11,7 @@ def vgg(cfg, i, batch_norm=False):
     in_channels = i
     for v in cfg:
         if v == 'M':
-            layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+            layers += [nn.MaxPool2d(kernel_size=2, stride=2)] # pool will not be affetced by pruning because no need for in_channels
         elif v == 'C':
             layers += [nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=True)]
         else:

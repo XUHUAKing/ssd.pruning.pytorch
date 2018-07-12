@@ -1,7 +1,6 @@
 """
     This file is for model evaluation separately for refineDet
 """
-# TODO: evaluation file for refineDet
 
 from __future__ import print_function
 import torch
@@ -469,7 +468,26 @@ def evaluate_detections(box_list, output_dir, dataset):
 if __name__ == '__main__':
     # load net
     num_classes = len(labelmap)                      # +1 for background
-    net = build_refine('test', 320, num_classes, use_refine = True, use_tcb = False)
+    net = build_refine('test', 320, num_classes, use_refine = True, use_tcb = False) # use_tcb = True
+    # if you want to eval refineDet from original version
+    '''
+    net = build_refine('test', 320, num_classes, use_refine = True, use_tcb = True)
+    # load resume network
+    resume_net_path = args.trained_model
+    print('Loading resume network', resume_net_path)
+    state_dict = torch.load(resume_net_path)
+    # create new OrderedDict that does not contain `module.`
+    from collections import OrderedDict
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        head = k[:7]
+        if head == 'module.':
+            name = k[7:] # remove `module.` because you store the model without DataParallel
+        else:
+            name = k
+        new_state_dict[name] = v
+    net.load_state_dict(new_state_dict)
+    '''
     net.load_state_dict(torch.load(args.trained_model))
     net.eval()
     print('Finished loading model!')
