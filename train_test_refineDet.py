@@ -1,4 +1,4 @@
-from data import * # val_dataset_root, dataset_root
+from data import * # val_dataset_root, dataset_root, Timer
 from data import VOC_CLASSES as voc_labelmap
 from data import COCO_CLASSES as coco_labelmap
 from data import WEISHI_CLASSES as weishi_labelmap

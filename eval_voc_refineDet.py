@@ -159,7 +159,7 @@ def write_voc_results_file(all_boxes, dataset):
         filename = get_voc_results_file_template(set_type, cls)
         with open(filename, 'wt') as f:
             for im_ind, index in enumerate(dataset.ids):
-                dets = all_boxes[cls_ind+1][im_ind]
+                dets = all_boxes[cls_ind][im_ind]
                 if dets == []:
                     continue
                 # the VOCdevkit expects 1-based indices
@@ -385,7 +385,7 @@ def test_net(save_folder, net, detector, priors, cuda,
         os.mkdir(save_folder)
 
     num_images = len(testset)
-    num_classes = (21, 81)[args.dataset == 'COCO']
+    num_classes = len(labelmap)                      # +1 for background
     # all detections are collected into:
     #    all_boxes[cls][image] = N x 5 array of detections in
     #    (x1, y1, x2, y2, score)
@@ -481,7 +481,7 @@ if __name__ == '__main__':
         net = net.cuda()
         cudnn.benchmark = True
     # evaluation
-    APs,mAP = test_net(args.save_folder, net, detector, priors, args.cuda, dataset,
+    test_net(args.save_folder, net, detector, priors, args.cuda, dataset,
              BaseTransform(net.size, dataset_mean),
              args.top_k, 320,
              thresh=args.confidence_threshold) # 320 originally for cfg['min_dim']
