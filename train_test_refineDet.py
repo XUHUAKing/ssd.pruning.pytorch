@@ -137,6 +137,7 @@ def train():
     # network set-up
     ssd_net = build_refine('train', cfg['min_dim'], cfg['num_classes'], use_refine = True, use_tcb = False)
     net = ssd_net
+    print(net)
 
     if args.cuda:
         net = torch.nn.DataParallel(ssd_net)
@@ -266,7 +267,7 @@ def train():
         # backprop
         optimizer.zero_grad()
         #arm branch loss
-        priors = priors.type(type(images.data)) #convert to same datatype
+        #priors = priors.type(type(images.data)) #convert to same datatype
         arm_loss_l,arm_loss_c = arm_criterion((arm_loc,arm_conf),priors,targets)
         #odm branch loss
         odm_loss_l, odm_loss_c = odm_criterion((odm_loc,odm_conf),priors,targets,(arm_loc,arm_conf),False)
@@ -282,10 +283,11 @@ def train():
         t1 = time.time()
 
         if iteration % 10 == 0:
-            print('timer: %.4f sec.' % (t1 - t0))
-            print('iter ' + repr(iteration) + ' || Loss: %.4f ||' % (loss.data[0]), end=' ')
-            print(' || AL: %.4f AC: %.4f OL: %.4f OC: %.4f||' % (
-                mean_arm_loss_l/10, mean_arm_loss_c/10, mean_odm_loss_l/10, mean_odm_loss_c/10))
+            print('Epoch:' + repr(epoch) + ' || epochiter: ' + repr(iteration % epoch_size) + '/' + repr(epoch_size)
+                  + '|| Total iter ' +
+                  repr(iteration) + ' || AL: %.4f AC: %.4f OL: %.4f OC: %.4f||' % (
+                mean_arm_loss_l/10,mean_arm_loss_c/10,mean_odm_loss_l/10,mean_odm_loss_c/10) +
+                'Timer: %.4f sec. ||' % (t1 - t0) + 'Loss: %.4f ||' % (loss.data[0]))
 
             mean_odm_loss_c = 0
             mean_odm_loss_l = 0

@@ -67,7 +67,8 @@ class RefineMultiBoxLoss(nn.Module):
         # when base on ARM filtering result
         if arm_data:
             arm_loc, arm_conf = arm_data
-        priors = priors.data[:loc_data.size(1), :]
+        #priors = priors.data[:loc_data.size(1), :]
+        priors = priors.data
         num = loc_data.size(0) #batch size
         num_priors = (priors.size(0))
 
