@@ -57,7 +57,6 @@ class RefineSSD(nn.Module):
     def __init__(self, phase, size, num_classes, use_refine=False, use_tcb=False):
         super(RefineSSD, self).__init__()
         self.num_classes = num_classes
-        # implement __call__ in PriorBox
         self.size = size
         self.use_refine = use_refine
         self.use_tcb = use_tcb

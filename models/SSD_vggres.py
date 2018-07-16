@@ -240,6 +240,7 @@ def add_extras(cfg, i, batch_norm=False):
 def vgg_multibox(vgg, extra_layers, cfg, num_classes):
     loc_layers = []
     conf_layers = []
+    # dimension for -1 or -2 is same
     vgg_source = [21, -2]# the output want to get from vgg, only conv2d layers have out_channels
     for k, v in enumerate(vgg_source):
         # Conv2d (in_channels, out_channels, kernel_size, stride, padding)

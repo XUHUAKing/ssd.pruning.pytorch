@@ -108,8 +108,9 @@ class Resize(object):
         self.size = size
 
     def __call__(self, image, boxes=None, labels=None):
-        image = cv2.resize(image, (self.size,
-                                 self.size))
+        interp_methods = [cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_AREA, cv2.INTER_NEAREST, cv2.INTER_LANCZOS4]
+        interp_method = interp_methods[random.randrange(5)]
+        image = cv2.resize(image, (self.size, self.size), interpolation=interp_method)
         # only change from rightmost and downmost, so won't affect coordinates since it start from top left
         return image, boxes, labels
 

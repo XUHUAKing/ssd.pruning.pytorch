@@ -46,6 +46,8 @@ parser.add_argument('--num_workers', default=4, type=int,
                     help='Number of workers used in dataloading')
 parser.add_argument('--cuda', default=True, type=str2bool,
                     help='Use CUDA to train model')
+parser.add_argument('-we','--warm_epoch', default=1,
+                    type=int, help='max epoch for retraining')
 parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float,
                     help='initial learning rate')
 parser.add_argument('--lr_step', default=30,
@@ -198,6 +200,12 @@ def train():
         iter_plot = create_vis_plot('Iteration', 'Loss', vis_title, vis_legend)
         epoch_plot = create_vis_plot('Epoch', 'Loss', vis_title, vis_legend)
 
+    # adjust learning rate based on epoch
+    stepvalues_VOC = (150 * epoch_size, 200 * epoch_size, 250 * epoch_size)
+    stepvalues_COCO = (90 * epoch_size, 120 * epoch_size, 140 * epoch_size)
+    stepvalues = (stepvalues_VOC,stepvalues_COCO)[args.dataset=='COCO']
+    step_index = 0
+
     # training data loader
     data_loader = data.DataLoader(dataset, args.batch_size,
                                   num_workers=args.num_workers,
@@ -211,7 +219,7 @@ def train():
     mean_arm_loss_c = 0
     mean_arm_loss_l = 0
     # max_iter = cfg['max_epoch'] * epoch_size
-    for iteration in range(args.start_iter, cfg['max_epoch']*epoch_size):
+    for iteration in range(args.start_iter, cfg['max_epoch']*epoch_size + 10):
         try:
             images, targets = next(batch_iterator)
         except StopIteration:
@@ -236,8 +244,7 @@ def train():
             conf_loss = 0
 
         if iteration != 0 and (iteration % epoch_size == 0):
-            adjust_learning_rate(optimizer, args.gamma, epoch)
-            epoch += 1
+    #        adjust_learning_rate(optimizer, args.gamma, epoch)
             # evaluation
             if args.evaluate == True:
                 # load net
@@ -253,6 +260,12 @@ def train():
                              top_k, cfg['min_dim'], thresh=args.confidence_threshold)
 
                 net.train()
+            epoch += 1
+
+        # update learning rate
+        if iteration in stepvalues:
+            step_index  = stepvalues.index(iteration) + 1
+        lr = adjust_learning_rate(optimizer, args.gamma, epoch, step_index, iteration, epoch_size)
 
         if args.cuda:
             images = Variable(images.cuda())
@@ -287,7 +300,7 @@ def train():
                   + '|| Total iter ' +
                   repr(iteration) + ' || AL: %.4f AC: %.4f OL: %.4f OC: %.4f||' % (
                 mean_arm_loss_l/10,mean_arm_loss_c/10,mean_odm_loss_l/10,mean_odm_loss_c/10) +
-                'Timer: %.4f sec. ||' % (t1 - t0) + 'Loss: %.4f ||' % (loss.data[0]))
+                'Timer: %.4f sec. ||' % (t1 - t0) + 'Loss: %.4f ||' % (loss.data[0]) + 'LR: %.8f' % (lr))
 
             mean_odm_loss_c = 0
             mean_odm_loss_l = 0
@@ -305,6 +318,19 @@ def train():
     torch.save(ssd_net.state_dict(),
                args.save_folder + '' + args.dataset + '.pth')
 
+def adjust_learning_rate(optimizer, gamma, epoch, step_index, iteration, epoch_size):
+    """Sets the learning rate
+    # Adapted from PyTorch Imagenet example:
+    # https://github.com/pytorch/examples/blob/master/imagenet/main.py
+    """
+    if epoch < args.warm_epoch:
+        lr = 1e-6 + (args.lr-1e-6) * iteration / (epoch_size * args.warm_epoch)
+    else:
+        lr = args.lr * (gamma ** (step_index))
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+    return lr
+'''
 def adjust_learning_rate(optimizer, gamma, epoch):
     """Sets the learning rate to the initial LR decayed by 10 at
         specified epoch
@@ -315,12 +341,14 @@ def adjust_learning_rate(optimizer, gamma, epoch):
     lr = args.lr * (gamma ** (step))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
+'''
 
 def xavier(param):
     init.xavier_uniform(param)
 
 # initialize the weights for conv2d
 def weights_init(m):
+    '''
     if isinstance(m, nn.Conv2d):
         xavier(m.weight.data)
         m.bias.data.zero_()
@@ -333,7 +361,6 @@ def weights_init(m):
                 m.state_dict()[key][...] = 1
         elif key.split('.')[-1] == 'bias':
             m.state_dict()[key][...] = 0
-    '''
 
 def create_vis_plot(_xlabel, _ylabel, _title, _legend):
     return viz.line(

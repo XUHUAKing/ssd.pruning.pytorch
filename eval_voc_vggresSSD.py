@@ -1,5 +1,6 @@
+from __future__ import print_function
 """
-    This file is for model evaluation separately
+    This file is for model evaluation on VOC for vggSSD/resnetSSD separately
 """
 """Adapted from:
     @longcw faster_rcnn_pytorch: https://github.com/longcw/faster_rcnn_pytorch
@@ -7,7 +8,6 @@
     Licensed under The MIT License [see LICENSE for details]
 """
 
-from __future__ import print_function
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
@@ -234,12 +234,7 @@ def voc_eval(detpath,
              cachedir,
              ovthresh=0.5,
              use_07_metric=True):
-    """rec, prec, ap = voc_eval(detpath,
-                           annopath,
-                           imagesetfile,
-                           classname,
-                           [ovthresh],
-                           [use_07_metric])
+'''
 Top level function that does the PASCAL VOC evaluation.
 detpath: Path to detections
    detpath.format(classname) should produce the detection results file.
@@ -251,7 +246,7 @@ cachedir: Directory for caching the annotations
 [ovthresh]: Overlap threshold (default = 0.5)
 [use_07_metric]: Whether to use VOC07's 11 point AP computation
    (default True)
-"""
+'''
 # assumes detections are in detpath.format(classname)
 # assumes annotations are in annopath.format(imagename)
 # assumes imagesetfile is a text file with each line an image name
@@ -384,7 +379,7 @@ def test_net(save_folder, net, cuda, dataset, transform, top_k,
         if cuda:
             x = x.cuda()
         _t['im_detect'].tic()
-        detections = net(x).data
+        detections = net(x, test=True).data
         detect_time = _t['im_detect'].toc(average=False)
 
         # skip j = 0, because it's the background class
@@ -392,9 +387,7 @@ def test_net(save_folder, net, cuda, dataset, transform, top_k,
             dets = detections[0, j, :]
             mask = dets[:, 0].gt(0.).expand(5, dets.size(0)).t()
             dets = torch.masked_select(dets, mask).view(-1, 5)
-            #if dets.dim() == 0:
-            #    continue
-            if dets.size(0) == 0:
+            if dets.dim() == 0:
                 continue
             boxes = dets[:, 1:]
             boxes[:, 0] *= w
