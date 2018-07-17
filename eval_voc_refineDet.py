@@ -19,7 +19,7 @@ import cv2
 
 # for evaluation on refineDet
 from data import * # val_dataset_root, dataset_root
-from layers.box_utils import nms # for detection in test_net for RefineDet
+from layers.box_utils import refine_nms # for detection in test_net for RefineDet
 from layers.functions import RefineDetect, PriorBox
 from models.RefineSSD_vgg import build_refine
 import torch.utils.data as data
@@ -43,7 +43,7 @@ parser.add_argument('--save_folder', default='eval/', type=str,
                     help='File path to save results')
 parser.add_argument('--confidence_threshold', default=0.01, type=float,
                     help='Detection confidence threshold')
-parser.add_argument('--top_k', default=5, type=int,
+parser.add_argument('--top_k', default=300, type=int,
                     help='Further restrict the number of predictions to parse')
 parser.add_argument('--cuda', default=True, type=str2bool,
                     help='Use cuda to train model')
@@ -147,8 +147,8 @@ def test_net(save_folder, net, detector, priors, cuda,
             c_dets = np.hstack((c_bboxes, c_scores[:, np.newaxis])).astype(
                 np.float32, copy=False)
             # nms
-            keep, _ = nms(torch.from_numpy(c_bboxes), torch.from_numpy(c_scores), 0.45, top_k) #0.45 is nms threshold
-            keep = keep[:50]
+            keep = refine_nms(c_dets, 0.45) #0.45 is nms threshold
+            keep = keep[:50] # keep[:top_k]
             c_dets = c_dets[keep, :]
             all_boxes[j][i] = c_dets #[class][imageID] = 1 x 5 where 5 is box_coord + score
 

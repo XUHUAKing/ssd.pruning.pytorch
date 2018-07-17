@@ -456,8 +456,9 @@ def test_net(save_folder, net, detector, priors, cuda,
             c_dets = np.hstack((c_bboxes, c_scores[:, np.newaxis])).astype(
                 np.float32, copy=False)
             # nms
-            keep, _ = nms(torch.from_numpy(c_bboxes), torch.from_numpy(c_scores), 0.45, top_k) #0.45 is nms threshold
-            keep = keep[:50]
+            # keep, _ = nms(torch.from_numpy(c_bboxes), torch.from_numpy(c_scores), 0.45, top_k) #0.45 is nms threshold
+            keep = refine_nms(c_dets, 0.45) #0.45 is nms threshold
+            keep = keep[:50] #50 is top_k?
             c_dets = c_dets[keep, :]
             all_boxes[j][i] = c_dets #[class][imageID] = 1 x 5 where 5 is box_coord + score
 
@@ -473,9 +474,7 @@ def test_net(save_folder, net, detector, priors, cuda,
 
         nms_time = _t['misc'].toc()
 
-        if i % 100 == 0:
-            print('im_detect: {:d}/{:d} {:.3f}s {:.3f}s'
-                  .format(i + 1, num_images, detect_time, nms_time))
+        print('im_detect: {:d}/{:d} {:.3f}s {:.3f}s'.format(i + 1, num_images, detect_time, nms_time))
 
     #write the detection results into det_file
     with open(det_file, 'wb') as f:
