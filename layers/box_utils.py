@@ -302,7 +302,8 @@ def refine_nms(dets, thresh):
     y2 = dets[:, 3]
     scores = dets[:, 4]
 
-    areas = (x2 - x1 + 1) * (y2 - y1 + 1)
+    #areas = (x2 - x1 + 1) * (y2 - y1 + 1)
+    areas = (x2 - x1) * (y2 - y1)
     order = scores.argsort()[::-1]
 
     keep = []
