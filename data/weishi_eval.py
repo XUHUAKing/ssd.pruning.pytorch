@@ -1,5 +1,5 @@
 # --------------------------------
-# eval tools for WEISHI dataset
+# TODO: eval tools for WEISHI dataset
 # --------------------------------
 
 """FOR WEISHI"""
@@ -122,7 +122,7 @@ def weishi_eval(detpath,
         ap = -1.
 
     return rec, prec, ap
-    
+
 '''
 def do_python_eval(dataset, output_dir='output', use_07=True):
     cachedir = os.path.join(dataset_path, 'annotations_cache')

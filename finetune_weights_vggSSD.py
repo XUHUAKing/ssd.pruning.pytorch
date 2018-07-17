@@ -24,8 +24,8 @@ from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
 from models.SSD_vggres import build_ssd
 
-# SSD_VGG and SSD_VGG.base
 # only prune base net
+# store the functions for ranking and deciding which filters to be pruned
 class FilterPrunner:
     def __init__(self, model):
         self.model = model
@@ -51,6 +51,8 @@ class FilterPrunner:
         weight_index = 0
         # the layer excluded from pruning due to existence of forking
         fork_indices = [21, len(self.model.base)-1]
+		# layer: index number, (name, module): item in _modules
+		# _modules is an embedded attribute in Module class, with type of OrderDict(), name is key, module is content
         for layer, (name, module) in enumerate(self.model.base._modules.items()):
             if isinstance(module, torch.nn.modules.conv.Conv2d) and (layer not in fork_indices):
                 print(module.weight.data.size()) # batch_size x out_channels x 3 x 3?
@@ -61,6 +63,7 @@ class FilterPrunner:
                 weight_index += 1
 
                 # compute the rank and store into self.filter_ranks
+                # size(1) represents the num of filter/individual feature map
                 values = \
                     torch.sum(abs_wgt, dim = 0).\
                         sum(dim=2).sum(dim=3)[0, :, 0, 0].data
@@ -118,7 +121,7 @@ class PrunningFineTuner_vggSSD:
 
     def test(self, i):
         print("Saving pruned model at epoch/iteration {}...".format(i))
-        torch.save(self.model.state_dict(), 'prunes/model_for_'+ repr(i) +'_test.pth')
+        torch.save(self.model.state_dict(), 'prunes/vggSSDmodel_for_'+ repr(i) +'_test.pth')
         print("Model saved, please use eval_.py for evaluating.")
 
     # epoches: fine tuning for this epoches
@@ -262,7 +265,6 @@ if __name__ == '__main__':
             new_state_dict[name] = v
         model.load_state_dict(new_state_dict)
         #model.load_state_dict(torch.load(args.trained_model))
-
 
     dataset = VOCDetection(root=args.dataset_root,
                            transform=SSDAugmentation(cfg['min_dim'],

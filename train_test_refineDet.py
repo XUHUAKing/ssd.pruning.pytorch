@@ -137,7 +137,7 @@ def train():
         viz = visdom.Visdom()
 
     # network set-up
-    ssd_net = build_refine('train', cfg['min_dim'], cfg['num_classes'], use_refine = True, use_tcb = False)
+    ssd_net = build_refine('train', cfg['min_dim'], cfg['num_classes'], use_refine = True, use_tcb = True)
     net = ssd_net
     print(net)
 

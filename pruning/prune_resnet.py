@@ -22,9 +22,10 @@ def prune_resnet18_conv_layer(model, layer_index, filter_index):
 	new_down_conv = None
 	if layer_index == 0:
 		_, conv = model.features._modules.items()[layer_index]
-		next_conv =  model.features._modules.items()[4][1][0].conv1
+		# 4: layer_index ,1: module, 0: [2, 2, 2, 2] for resnet18, 2 basic block for one stage, get the first basic block
+		next_conv =  model.features._modules.items()[4][1][0].conv1 # conv1 in a basic block
 
-	if layer_index > 0 and layer_index < 5:
+	if layer_index > 0 and layer_index < 5: # 1, 2, 3, 4
                 tt=1
                 kt=layer_index//3
                 pt=layer_index%2
