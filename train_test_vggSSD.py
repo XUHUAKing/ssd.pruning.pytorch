@@ -309,10 +309,10 @@ def update_vis_plot(iteration, loc, conf, window1, window2, update_type,
         net: test-type ssd net
         dataset: validation dataset
         transform: BaseTransform - not used here
+        max_per_image/top_k：The Maximum number of box preds to consider
 """
 def test_net(save_folder, net, cuda,
-             testset, transform, top_k,
-             max_per_image=300, thresh=0.05):
+             testset, transform, max_per_image=300, thresh=0.05):
 
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)

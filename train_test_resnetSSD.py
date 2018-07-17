@@ -211,12 +211,12 @@ def train():
                 top_k = (300, 200)[args.dataset == 'COCO']
                 if args.dataset == 'VOC':
                     APs,mAP = test_net(args.eval_folder, net, args.cuda, val_dataset,
-                             BaseTransform(net.module.size, cfg['testset_mean']),
-                             top_k, cfg['min_dim'], thresh=args.confidence_threshold)
+                             BaseTransform(net.size, cfg['testset_mean']),
+                             top_k, thresh=args.confidence_threshold)
                 else:#COCO
-                    test_net(args.eval_folder, args.cuda, val_dataset,
-                             BaseTransform(net.module.size, cfg['testset_mean']),
-                             top_k, cfg['min_dim'], thresh=args.confidence_threshold)
+                    test_net(args.eval_folder, net, args.cuda, val_dataset,
+                             BaseTransform(net.size, cfg['testset_mean']),
+                             top_k, thresh=args.confidence_threshold)
 
                 net.train()
 
@@ -313,8 +313,7 @@ def update_vis_plot(iteration, loc, conf, window1, window2, update_type,
         transform: BaseTransform
 """
 def test_net(save_folder, net, cuda,
-             testset, transform, top_k,
-             max_per_image=300, thresh=0.05):
+             testset, transform, max_per_image=300, thresh=0.05):
 
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)

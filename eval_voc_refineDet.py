@@ -90,10 +90,10 @@ detector = RefineDetect(cfg['num_classes'], 0, cfg, object_score=0.01)
         testset: validation dataset
         transform: BaseTransform -- required for refineDet testing,
                    because it pull_image instead of pull_item (this will transform for you)
+        max_per_image/top_k： The Maximum number of box preds to consider
 """
 def test_net(save_folder, net, detector, priors, cuda,
-             testset, transform, top_k,
-             max_per_image=320, thresh=0.05): # image size is 320 for RefineDet
+             testset, transform, max_per_image=300, thresh=0.05): # max_per_image is same as top_k
 
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
@@ -148,7 +148,7 @@ def test_net(save_folder, net, detector, priors, cuda,
                 np.float32, copy=False)
             # nms
             keep = refine_nms(c_dets, 0.45) #0.45 is nms threshold
-            keep = keep[:50] # keep[:top_k]
+            keep = keep[:50]
             c_dets = c_dets[keep, :]
             all_boxes[j][i] = c_dets #[class][imageID] = 1 x 5 where 5 is box_coord + score
 
@@ -157,7 +157,7 @@ def test_net(save_folder, net, detector, priors, cuda,
             # to keep only max_per_image results
             if len(image_scores) > max_per_image:
                 # get the smallest score for each class for each image if want to keep only max_per_image results
-                image_thresh = np.sort(image_scores)[-max_per_image]
+                image_thresh = np.sort(image_scores)[-max_per_image] # only keep top_k results
                 for j in range(1, num_classes):
                     keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
                     all_boxes[j][i] = all_boxes[j][i][keep, :]
@@ -209,5 +209,4 @@ if __name__ == '__main__':
     # evaluation
     test_net(args.save_folder, net, detector, priors, args.cuda, dataset,
              BaseTransform(net.size, dataset_mean),
-             args.top_k, 320,
-             thresh=args.confidence_threshold) # 320 originally for cfg['min_dim']
+             args.top_k, thresh=args.confidence_threshold) # 320 originally for cfg['min_dim']

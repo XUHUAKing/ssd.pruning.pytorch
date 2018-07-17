@@ -252,12 +252,12 @@ def train():
                 top_k = (300, 200)[args.dataset == 'COCO']
                 if args.dataset == 'VOC':
                     APs,mAP = test_net(args.eval_folder, net, detector, priors, args.cuda, val_dataset,
-                             BaseTransform(net.module.size, cfg['testset_mean']),
-                             top_k, cfg['min_dim'], thresh=args.confidence_threshold) # 320 originally for cfg['min_dim']
+                             BaseTransform(net.size, cfg['testset_mean']),
+                             top_k, thresh=args.confidence_threshold) # 320 originally for cfg['min_dim']
                 else:#COCO
                     test_net(args.eval_folder, net, detector, priors, args.cuda, val_dataset,
-                             BaseTransform(net.module.size, cfg['testset_mean']),
-                             top_k, cfg['min_dim'], thresh=args.confidence_threshold)
+                             BaseTransform(net.size, cfg['testset_mean']),
+                             top_k, thresh=args.confidence_threshold)
 
                 net.train()
             epoch += 1
@@ -401,8 +401,7 @@ def update_vis_plot(iteration, loc, conf, window1, window2, update_type,
                    because it pull_image instead of pull_item (this will transform for you)
 """
 def test_net(save_folder, net, detector, priors, cuda,
-             testset, transform, top_k,
-             max_per_image=320, thresh=0.05): # image size is 320 for RefineDet
+             testset, transform, max_per_image=300, thresh=0.05): # max_per_image is same as top_k
 
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
@@ -458,7 +457,7 @@ def test_net(save_folder, net, detector, priors, cuda,
             # nms
             # keep, _ = nms(torch.from_numpy(c_bboxes), torch.from_numpy(c_scores), 0.45, top_k) #0.45 is nms threshold
             keep = refine_nms(c_dets, 0.45) #0.45 is nms threshold
-            keep = keep[:50] #50 is top_k?
+            keep = keep[:50]
             c_dets = c_dets[keep, :]
             all_boxes[j][i] = c_dets #[class][imageID] = 1 x 5 where 5 is box_coord + score
 

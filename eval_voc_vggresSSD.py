@@ -87,8 +87,7 @@ set_type = 'test'
         transform: BaseTransform - not used here
 """
 def test_net(save_folder, net, cuda,
-             testset, transform, top_k,
-             max_per_image=300, thresh=0.05):
+             testset, transform, max_per_image=300, thresh=0.05):
 
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
@@ -164,5 +163,5 @@ if __name__ == '__main__':
         cudnn.benchmark = True
     # evaluation
     test_net(args.save_folder, net, args.cuda, dataset,
-             BaseTransform(net.size, dataset_mean), args.top_k, 300,
+             BaseTransform(net.size, dataset_mean), args.top_k,
              thresh=args.confidence_threshold)
