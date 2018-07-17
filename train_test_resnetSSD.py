@@ -211,11 +211,11 @@ def train():
                 top_k = (300, 200)[args.dataset == 'COCO']
                 if args.dataset == 'VOC':
                     APs,mAP = test_net(args.eval_folder, net, args.cuda, val_dataset,
-                             BaseTransform(net.size, cfg['testset_mean']),
+                             BaseTransform(net.module.size, cfg['testset_mean']),
                              top_k, thresh=args.confidence_threshold)
                 else:#COCO
                     test_net(args.eval_folder, net, args.cuda, val_dataset,
-                             BaseTransform(net.size, cfg['testset_mean']),
+                             BaseTransform(net.module.size, cfg['testset_mean']),
                              top_k, thresh=args.confidence_threshold)
 
                 net.train()

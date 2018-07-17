@@ -252,12 +252,12 @@ def train():
                 top_k = (300, 200)[args.dataset == 'COCO']
                 if args.dataset == 'VOC':
                     APs,mAP = test_net(args.eval_folder, net, detector, priors, args.cuda, val_dataset,
-                             BaseTransform(net.size, cfg['testset_mean']),
+                             BaseTransform(net.module.size, cfg['testset_mean']),
                              top_k, thresh=args.confidence_threshold) # 320 originally for cfg['min_dim']
                 else:#COCO
                     test_net(args.eval_folder, net, detector, priors, args.cuda, val_dataset,
-                             BaseTransform(net.size, cfg['testset_mean']),
-                             top_k, thresh=args.confidence_threshold)
+                             BaseTransform(net.module.size, cfg['testset_mean']),
+                             top_k, thresh=args.confidence_threshold) # DataParallel object should have module for net.module.size
 
                 net.train()
             epoch += 1
