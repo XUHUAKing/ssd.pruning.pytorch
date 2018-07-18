@@ -1,3 +1,8 @@
+'''
+    Train + Test SSD model with vgg backbone
+    Execute: python3 train_test_vggSSD.py --evaluate True (testing while training)
+    Execute: python3 train_test_vggSSD.py (only training)
+'''
 from data import *
 from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss

@@ -1,5 +1,6 @@
 '''
     Use absolute weights-based criterion for filter pruning on vggSSD
+    Execute: python3 finetune_weights_vggSSD.py --prune --trained_model weights/_your_trained_model_.pth
 '''
 import torch
 from torch.autograd import Variable
@@ -51,11 +52,11 @@ class FilterPrunner:
         weight_index = 0
         # the layer excluded from pruning due to existence of forking
         fork_indices = [21, len(self.model.base)-1]
-		# layer: index number, (name, module): item in _modules
-		# _modules is an embedded attribute in Module class, with type of OrderDict(), name is key, module is content
+        # layer: index number, (name, module): item in _modules
+        # _modules is an embedded attribute in Module class, with type of OrderDict(), name is key, module is content
         for layer, (name, module) in enumerate(self.model.base._modules.items()):
             if isinstance(module, torch.nn.modules.conv.Conv2d) and (layer not in fork_indices):
-                print(module.weight.data.size()) # batch_size x out_channels x 3 x 3?
+                # print(module.weight.data.size()) # batch_size x out_channels x 3 x 3?
 
                 abs_wgt = torch.abs(module.weight.data) # batch_size x out_channels x 3 x 3?
                 self.weights.append(abs_wgt)
@@ -65,8 +66,8 @@ class FilterPrunner:
                 # compute the rank and store into self.filter_ranks
                 # size(1) represents the num of filter/individual feature map
                 values = \
-                    torch.sum(abs_wgt, dim = 0).\
-                        sum(dim=2).sum(dim=3)[0, :, 0, 0].data
+                    torch.sum(abs_wgt, dim = 0, keepdim = True).\
+                        sum(dim=2, keepdim = True).sum(dim=3, keepdim = True)[0, :, 0, 0]#.data
 
                 # Normalize the sum of weight by the batch_size
                 values = values / abs_wgt.size(0) # (filter_number for this layer, 1)
@@ -141,16 +142,17 @@ class PrunningFineTuner_vggSSD:
     def train_batch(self, optimizer, batch, label, rank_filters):
         # set gradients of all model parameters to zero
         self.model.zero_grad() # same as optimizer.zero_grad() when SGD() get model.parameters
-        input = Variable(batch)
+        # input = Variable(batch)
+        input = batch
 
         # just for ranking the filter, not for params update, use self.prunner for output
         if rank_filters:
             output = self.prunner.forward(input)
-            loss_l, loss_c = self.criterion(output, Variable(label))
+            loss_l, loss_c = self.criterion(output, label)
             loss = loss_l + loss_c
             loss.backward()
         else:
-            loss_l, loss_c = self.criterion(self.model(input), Variable(label))
+            loss_l, loss_c = self.criterion(self.model(input), label)
             loss = loss_l + loss_c
             loss.backward()
             optimizer.step() # update params
@@ -158,7 +160,9 @@ class PrunningFineTuner_vggSSD:
     # train for one epoch, so the data_loader will not pop StopIteration error
     def train_epoch(self, optimizer = None, rank_filters = False):
         for batch, label in self.train_data_loader:
-            self.train_batch(optimizer, batch.cuda(), label.cuda(), rank_filters)
+            batch = Variable(batch.cuda())
+            label = [Variable(ann.cuda(), volatile=True) for ann in label]
+            self.train_batch(optimizer, batch, label, rank_filters)
 
     def get_candidates_to_prune(self, num_filters_to_prune):
         self.prunner.reset()
@@ -171,8 +175,8 @@ class PrunningFineTuner_vggSSD:
 
     def total_num_filters(self):
         filters = 0
-        for name, module in self.model.base._modules.items():
-            fork_indices = [21, len(self.model.base)-1]
+        fork_indices = [21, len(self.model.base)-1]
+        for layer, (name, module) in enumerate(self.model.base._modules.items()):
             if isinstance(module, torch.nn.modules.conv.Conv2d) and (layer not in fork_indices):
                 filters = filters + module.out_channels
         return filters

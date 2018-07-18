@@ -1,3 +1,8 @@
+'''
+    Train + Test SSD model with resnet backbone
+    Execute: python3 train_test_resnetSSD.py --evaluate True (testing while training)
+    Execute: python3 train_test_resnetSSD.py (only training)
+'''
 from data import *
 from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss

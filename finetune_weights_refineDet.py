@@ -1,5 +1,6 @@
 '''
-	Use absolute weights-based criterion for filter pruning on refineDet(vgg)
+    Use absolute weights-based criterion for filter pruning on refineDet(vgg)
+    Execute: python3 finetune_weights_refineDet.py --prune --trained_model weights/_your_trained_model_.pth
 '''
 import torch
 from torch.autograd import Variable
@@ -48,9 +49,9 @@ class FilterPrunner:
         fork_indices = [21, 28, len(self.model.base)-1]
         for layer, (name, module) in enumerate(self.model.base._modules.items()):
             if isinstance(module, torch.nn.modules.conv.Conv2d) and (layer not in fork_indices):
-                print(module.weight.data.size()) # batch_size x out_channels x 3 x 3?
+                # print(module.weight.data.size()) # out_channels x in_channels x 3 x 3 [64, 3, 3, 3]
 
-                abs_wgt = torch.abs(module.weight.data) # batch_size x out_channels x 3 x 3?
+                abs_wgt = torch.abs(module.weight.data)
                 self.weights.append(abs_wgt)
                 self.weight_to_layer[weight_index] = layer
                 weight_index += 1
@@ -58,8 +59,8 @@ class FilterPrunner:
                 # compute the rank and store into self.filter_ranks
                 # size(1) represents the num of filter/individual feature map
                 values = \
-                    torch.sum(abs_wgt, dim = 0).\
-                        sum(dim=2).sum(dim=3)[0, :, 0, 0].data
+                    torch.sum(abs_wgt, dim = 0, keepdim = True).\
+                        sum(dim=2, keepdim = True).sum(dim=3, keepdim = True)[0, :, 0, 0]# .data -- don't need .data because abs_wgt is not autograd.Variable
 
                 # Normalize the sum of weight by the batch_size
                 values = values / abs_wgt.size(0) # (filter_number for this layer, 1)
@@ -135,19 +136,20 @@ class PrunningFineTuner_refineDet:
     def train_batch(self, optimizer, batch, priors, label, rank_filters):
         # set gradients of all model parameters to zero
         self.model.zero_grad() # same as optimizer.zero_grad() when SGD() get model.parameters
-        input = Variable(batch)
+        # input = Variable(batch)
+        input = batch
 
         # just for ranking the filter, not for params update, use self.prunner for output
         if rank_filters:
-			arm_loc, arm_conf, odm_loc, odm_conf = self.prunner.forward(input)
-            arm_loss_l, arm_loss_c = self.arm_criterion((arm_loc, arm_conf), priors, Variable(label))
-	        odm_loss_l, odm_loss_c = self.odm_criterion((odm_loc, odm_conf), priors, Variable(label),(arm_loc,arm_conf), False)
+            arm_loc, arm_conf, odm_loc, odm_conf = self.prunner.forward(input)
+            arm_loss_l, arm_loss_c = self.arm_criterion((arm_loc, arm_conf), priors, label)#Variable(label))
+            odm_loss_l, odm_loss_c = self.odm_criterion((odm_loc, odm_conf), priors, label,(arm_loc,arm_conf), False)
             loss = arm_loss_l + arm_loss_c + odm_loss_l + odm_loss_c
             loss.backward()
         else:
-			arm_loc, arm_conf, odm_loc, odm_conf = self.model(input)
-            arm_loss_l, arm_loss_c = self.arm_criterion((arm_loc, arm_conf), priors, Variable(label))
-	        odm_loss_l, odm_loss_c = self.odm_criterion((odm_loc, odm_conf), priors, Variable(label),(arm_loc,arm_conf), False)
+            arm_loc, arm_conf, odm_loc, odm_conf = self.model(input)
+            arm_loss_l, arm_loss_c = self.arm_criterion((arm_loc, arm_conf), priors, label)#Variable(label))
+            odm_loss_l, odm_loss_c = self.odm_criterion((odm_loc, odm_conf), priors, label,(arm_loc,arm_conf), False)
             loss = arm_loss_l + arm_loss_c + odm_loss_l + odm_loss_c
             loss.backward()
             optimizer.step() # update params
@@ -155,7 +157,9 @@ class PrunningFineTuner_refineDet:
     # train for one epoch, so the data_loader will not pop StopIteration error
     def train_epoch(self, priors, optimizer = None, rank_filters = False):
         for batch, label in self.train_data_loader:
-            self.train_batch(optimizer, batch.cuda(), priors, label.cuda(), rank_filters)
+            batch = Variable(batch.cuda())
+            label = [Variable(ann.cuda(), volatile=True) for ann in label]
+            self.train_batch(optimizer, batch, priors, label, rank_filters)
 
     def get_candidates_to_prune(self, priors, num_filters_to_prune):
         self.prunner.reset()
@@ -168,8 +172,8 @@ class PrunningFineTuner_refineDet:
 
     def total_num_filters(self):
         filters = 0
-        for name, module in self.model.base._modules.items():
-	        fork_indices = [21, 28, len(self.model.base)-1]
+        fork_indices = [21, 28, len(self.model.base)-1]
+        for layer, (name, module) in enumerate(self.model.base._modules.items()):
             if isinstance(module, torch.nn.modules.conv.Conv2d) and (layer not in fork_indices):
                 filters = filters + module.out_channels
         return filters
@@ -196,7 +200,7 @@ class PrunningFineTuner_refineDet:
 
         for iteration in range(iterations):
             print("Ranking filters.. ")
-            prune_targets = self.get_candidates_to_prune(num_filters_to_prune_per_iteration)
+            prune_targets = self.get_candidates_to_prune(priors, num_filters_to_prune_per_iteration)
             layers_prunned = {}
             for layer_index, filter_index in prune_targets:
                 if layer_index not in layers_prunned:
@@ -216,8 +220,8 @@ class PrunningFineTuner_refineDet:
             self.test(iteration)
             print("Fine tuning to recover from prunning iteration.")
 
-		    # otimizer and loss set-up
-		    optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
+            # otimizer and loss set-up
+            optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
 
             self.train(priors, optimizer, epoches = 10)
 
@@ -228,12 +232,12 @@ class PrunningFineTuner_refineDet:
         #torch.save(model, "model_prunned")
 
 def get_args():
-    parser = argparse.argumentparser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("--train", dest="train", action="store_true")
     parser.add_argument("--prune", dest="prune", action="store_true")
     parser.add_argument("--prune_folder", default = "prunes/")
     parser.add_argument("--trained_model", default = "prunes/Refinemodel_trained.pth")
-    parser.add_argument('--dataset_root', default=voc_root)
+    parser.add_argument('--dataset_root', default=VOC_ROOT)
     parser.set_defaults(train=False)
     parser.set_defaults(prune=False)
     args = parser.parse_args()
@@ -248,10 +252,10 @@ if __name__ == '__main__':
         os.mkdir(args.prune_folder)
 
     if args.train:
-		model = build_refine('train', cfg['min_dim'], cfg['num_classes'], use_refine = True, use_tcb = True).cuda()
+        model = build_refine('train', cfg['min_dim'], cfg['num_classes'], use_refine = True, use_tcb = True).cuda()
     elif args.prune:
         #model = torch.load("model").cuda()
-		model = build_refine('train', cfg['min_dim'], cfg['num_classes'], use_refine = True, use_tcb = True).cuda()
+        model = build_refine('train', cfg['min_dim'], cfg['num_classes'], use_refine = True, use_tcb = True).cuda()
         state_dict = torch.load(args.trained_model)
         from collections import OrderedDict
         new_state_dict = OrderedDict()
@@ -273,12 +277,12 @@ if __name__ == '__main__':
                                   shuffle=True, collate_fn=detection_collate,
                                   pin_memory=True)
 
-    arm_criterion = RefineMultiBoxLoss(2, 0.5, True, 0, True, 3, 0.5, False, 0, args.cuda)
-    odm_criterion = RefineMultiBoxLoss(cfg['num_classes'], 0.5, True, 0, True, 3, 0.5, False, 0.01, args.cuda)# 0.01 -> 0.99 negative confidence threshold
+    arm_criterion = RefineMultiBoxLoss(2, 0.5, True, 0, True, 3, 0.5, False, 0, cuda)
+    odm_criterion = RefineMultiBoxLoss(cfg['num_classes'], 0.5, True, 0, True, 3, 0.5, False, 0.01, cuda)# 0.01 -> 0.99 negative confidence threshold
 
     # different from normal ssd, where the PriorBox is stored inside SSD object
     priorbox = PriorBox(cfg)
-    priors = Variable(priorbox.forward(), volatile=True)
+    priors = Variable(priorbox.forward().cuda(), volatile=True)
 
     fine_tuner = PrunningFineTuner_refineDet(data_loader, arm_criterion, odm_criterion, model)
 

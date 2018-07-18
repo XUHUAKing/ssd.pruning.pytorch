@@ -1,6 +1,7 @@
 from __future__ import print_function
 """
-    This file is for model evaluation on VOC for vggSSD/resnetSSD separately
+    Model evaluation on VOC for vggSSD/resnetSSD separately
+    Execute: python3 eval_voc_vggresSSD.py --trained_model weights/_your_trained_SSD_model_.pth
 """
 """Adapted from:
     @longcw faster_rcnn_pytorch: https://github.com/longcw/faster_rcnn_pytorch

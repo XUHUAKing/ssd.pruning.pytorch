@@ -1,6 +1,7 @@
 from __future__ import print_function
 """
-    This file is for model evaluation separately for refineDet
+    Model evaluation on VOC for refineDet separately
+    Execute: python3 eval_voc_refineDet.py --trained_model weights/_your_trained_refineDet_model_.pth
 """
 
 import torch
