@@ -3,7 +3,7 @@ from data import VOC_CLASSES as voc_labelmap
 from data import COCO_CLASSES as coco_labelmap
 from data import WEISHI_CLASSES as weishi_labelmap
 from utils.augmentations import SSDAugmentation
-from layers.box_utils import nms # for detection in test_net for RefineDet
+from layers.box_utils import refine_nms # for detection in test_net for RefineDet
 from layers.modules import RefineMultiBoxLoss
 from layers.functions import RefineDetect, PriorBox
 from models.RefineSSD_vgg import build_refine
@@ -142,7 +142,7 @@ def train():
     print(net)
 
     if args.cuda:
-        net = torch.nn.DataParallel(ssd_net)
+        net = torch.nn.DataParallel(ssd_net) # state_dict will have .module. prefix
         cudnn.benchmark = True
 
     if args.resume:
@@ -466,7 +466,7 @@ def test_net(save_folder, net, detector, priors, cuda,
             # to keep only max_per_image results
             if len(image_scores) > max_per_image:
                 # get the smallest score for each class for each image if want to keep only max_per_image results
-                image_thresh = np.sort(image_scores)[-max_per_image]
+                image_thresh = np.sort(image_scores)[-max_per_image] # top_k
                 for j in range(1, num_classes):
                     keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
                     all_boxes[j][i] = all_boxes[j][i][keep, :]

@@ -151,6 +151,21 @@ if __name__ == '__main__':
     # load net
     num_classes = len(labelmap)                      # +1 for background
     net = build_ssd('test', 300, num_classes, base='vgg') # initialize SSD (vgg/resnet)
+    '''
+    # load resume network
+    state_dict = torch.load(args.trained_model)
+    from collections import OrderedDict
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        # change from self.vgg to self.base
+        head = k[:4]
+        if head == 'vgg.':
+            name = 'base.' + k[4:]
+        else:
+            name = k
+        new_state_dict[name] = v
+    net.load_state_dict(new_state_dict)
+    '''
     net.load_state_dict(torch.load(args.trained_model))
     net.eval()
     print('Finished loading model!')
