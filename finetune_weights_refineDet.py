@@ -135,8 +135,7 @@ def test_net(save_folder, net, detector, priors, cuda,
     APs,mAP = testset.evaluate_detections(all_boxes, save_folder)
 
 # --------------------------------------------------------------------------- Pruning Part
-# only prune base net
-# store the functions for ranking and deciding which filters to be pruned
+# store the functions for ranking
 class FilterPrunner:
     def __init__(self, model):
         self.model = model
@@ -150,7 +149,6 @@ class FilterPrunner:
         self.filter_ranks = {}
 
     # rank the filters for current model
-    #def forward(self, x):
     def rank(self):
         self.weights = [] # store the absolute weights for filter
         self.weight_to_layer = {} # dict matching weight index to layer index
@@ -295,7 +293,8 @@ class PrunningFineTuner_refineDet:
         filters = 0
         fork_indices = [21, 28, 33]# len(self.model.base)-1]
         for layer, (name, module) in enumerate(self.model.base._modules.items()):
-            if isinstance(module, torch.nn.modules.conv.Conv2d) and (layer not in fork_indices):
+            if isinstance(module, torch.nn.modules.conv.Conv2d) and (layer not in fork_indices)
+                and (not module.weight.data.size(0) <= 1):
                 filters = filters + module.out_channels
         return filters
 

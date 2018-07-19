@@ -19,6 +19,9 @@ from operator import itemgetter
 from heapq import nsmallest #heap queue algorithm
 import time
 
+# for testing
+import pickle
+import os
 from data import *
 import torch.utils.data as data
 from utils.augmentations import SSDAugmentation
@@ -42,8 +45,68 @@ args = parser.parse_args()
 dataset_mean = (104, 117, 123)
 cfg = voc
 
-# only prune base net
-# store the functions for ranking and deciding which filters to be pruned
+def test_net(save_folder, net, cuda,
+             testset, transform, max_per_image=300, thresh=0.05):
+
+    if not os.path.exists(save_folder):
+        os.mkdir(save_folder)
+
+    num_images = len(testset)
+    num_classes = len(labelmap)                      # +1 for background
+    # all detections are collected into:
+    #    all_boxes[cls][image] = N x 5 array of detections in
+    #    (x1, y1, x2, y2, score)
+    all_boxes = [[[] for _ in range(num_images)]
+                 for _ in range(num_classes)]
+
+    # timers
+    _t = {'im_detect': Timer(), 'misc': Timer()}
+    #output_dir = get_output_dir('ssd300_120000', set_type) #directory storing output results
+    #det_file = os.path.join(output_dir, 'detections.pkl') #file storing output result under output_dir
+    det_file = os.path.join(save_folder, 'detections.pkl')
+
+    for i in range(num_images):
+        im, gt, h, w = testset.pull_item(i) # include BaseTransform inside
+
+        x = Variable(im.unsqueeze(0)) #insert a dimension of size one at the dim 0
+        if cuda:
+            x = x.cuda()
+
+        _t['im_detect'].tic()
+        detections = net(x=x, test=True).data # get the detection results
+        detect_time = _t['im_detect'].toc(average=False) #store the detection time
+
+        # skip j = 0, because it's the background class
+        for j in range(1, detections.size(1)): # for every class
+            dets = detections[0, j, :]#size( ** , 5)
+            mask = dets[:, 0].gt(0.).expand(5, dets.size(0)).t()
+            dets = torch.masked_select(dets, mask).view(-1, 5)
+            if dets.dim() == 0:
+                continue
+            #if dets.size(0) == 0:
+            #    continue
+            boxes = dets[:, 1:]
+            boxes[:, 0] *= w
+            boxes[:, 2] *= w
+            boxes[:, 1] *= h
+            boxes[:, 3] *= h
+            scores = dets[:, 0].cpu().numpy()
+            cls_dets = np.hstack((boxes.cpu().numpy(),
+                                  scores[:, np.newaxis])).astype(np.float32,
+                                                                 copy=False)
+            all_boxes[j][i] = cls_dets #[class][imageID] = 1 x 5 where 5 is box_coord + score
+
+        print('im_detect: {:d}/{:d} {:.3f}s'.format(i + 1, num_images, detect_time))
+
+    #write the detection results into det_file
+    with open(det_file, 'wb') as f:
+        pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
+
+    print('Evaluating detections')
+    APs,mAP = testset.evaluate_detections(all_boxes, save_folder)
+
+# --------------------------------------------------------------------------- Pruning Part
+# store the functions for ranking
 class FilterPrunner:
     def __init__(self, model):
         self.model = model
@@ -55,13 +118,7 @@ class FilterPrunner:
         # self.grad_index = 0
         # self.activation_to_layer = {}
         self.filter_ranks = {}
-    '''
-    Do one-time forward propagation, prepare useful info. for
-    1. compute_rank()
-    2. backprop
-    3. training and param update
-    @return: output of forward
-    '''
+
     def rank(self):
         self.weights = [] # store the absolute weights for filter
         self.weight_to_layer = {} # dict matching weight index to layer index
@@ -147,9 +204,9 @@ class PrunningFineTuner_vggSSD:
     def test(self):
         self.model.eval()
         # evaluation
-        # test_net('prunes/vggssd_test', self.model, detector, priors, args.cuda, testset,
-        #        BaseTransform(self.model.size, cfg['dataset_mean']),
-        #        300, thresh=0.01)
+        test_net('prunes/test', self.model, args.cuda, testset,
+                 BaseTransform(self.model.size, cfg['dataset_mean']),
+                 300, thresh=0.01)
 
         self.model.train()
 
@@ -180,7 +237,10 @@ class PrunningFineTuner_vggSSD:
 
     # train for one epoch, so the data_loader will not pop StopIteration error
     def train_epoch(self, optimizer = None):
+        num_batch = 0
         for batch, label in self.train_data_loader:
+            num_batch += 1
+            print("Training batch ", num_batch, "...")
             batch = Variable(batch.cuda())
             label = [Variable(ann.cuda(), volatile=True) for ann in label]
             self.train_batch(optimizer, batch, label)
@@ -198,7 +258,8 @@ class PrunningFineTuner_vggSSD:
         filters = 0
         fork_indices = [21, 33]# len(self.model.base)-1]
         for layer, (name, module) in enumerate(self.model.base._modules.items()):
-            if isinstance(module, torch.nn.modules.conv.Conv2d) and (layer not in fork_indices):
+            if isinstance(module, torch.nn.modules.conv.Conv2d) and (layer not in fork_indices)
+                and (not module.weight.data.size(0) <= 1):
                 filters = filters + module.out_channels
         return filters
 
@@ -282,8 +343,7 @@ if __name__ == '__main__':
         #model.load_state_dict(torch.load(args.trained_model))
 
     dataset = VOCDetection(root=args.dataset_root,
-                           transform=SSDAugmentation(cfg['min_dim'],
-                                                     cfg['dataset_mean']))
+                           transform=SSDAugmentation(cfg['min_dim'], cfg['dataset_mean']))
     testset = VOCDetection(root=args.dataset_root, image_sets=[('2007', 'test')],
                                 transform=BaseTransform(cfg['min_dim'], cfg['testset_mean']))
     data_loader = data.DataLoader(dataset, 32, num_workers=4,
@@ -297,7 +357,7 @@ if __name__ == '__main__':
     if args.train:
         fine_tuner.train(epoches = 20)
         print('Saving trained model...')
-        torch.save(self.model.state_dict(), 'prunes/vgg_trained.pth')
+        torch.save(model, 'prunes/vggSSD_trained')
         #torch.save(model, "model")
 
     elif args.prune:
