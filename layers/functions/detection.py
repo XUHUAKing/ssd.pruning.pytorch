@@ -33,6 +33,7 @@ class Detect(Function):
         """
         num = loc_data.size(0)  # batch size
         num_priors = prior_data.size(0)
+        # top_k is 200 by default, num is 1 when testing because image input one by one
         output = torch.zeros(num, self.num_classes, self.top_k, 5)
         # for each sample, every prior box will have #num_classes conf. scores for it
         conf_preds = conf_data.view(num, num_priors,
@@ -65,5 +66,5 @@ class Detect(Function):
         flt = output.contiguous().view(num, -1, 5)
         _, idx = flt[:, :, 0].sort(1, descending=True)
         _, rank = idx.sort(1)
-        flt[(rank < self.top_k).unsqueeze(-1).expand_as(flt)].fill_(0)
-        return output # why not flt??
+        flt[(rank < self.top_k).unsqueeze(-1).expand_as(flt)].fill_(0) # this code has no effect
+        return output # pointer

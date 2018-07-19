@@ -47,6 +47,7 @@ class SSD_VGG(nn.Module):
 
         #if phase == 'test':
         self.softmax = nn.Softmax(dim=-1)
+        # top_k = (300, 200)[args.dataset == 'COCO'], 200 here is top_k
         self.detect = Detect(num_classes, 0, self.cfg, 200, 0.01, 0.45)
 
     def forward(self, x, test=False):

@@ -151,12 +151,12 @@ Handle Cases: < : layers be affected
     4. Tree paths
 '''
 def prune_vggbase_conv_layer(model, layer_index, filter_index):
-    _, conv = model.base._modules.items()[layer_index]
+    _, conv = list(model.base._modules.items())[layer_index]
     next_conv = None
     offset = 1
     # search for the next conv, based on current conv with id = (layer_index, filter_index)
     while layer_index + offset <  len(model.base._modules.items()):
-        res =  model.base._modules.items()[layer_index+offset] # name, module
+        res =  list(model.base._modules.items())[layer_index+offset] # name, module
         if isinstance(res[1], torch.nn.modules.conv.Conv2d):
             next_name, next_conv = res
             break
@@ -173,7 +173,7 @@ def prune_vggbase_conv_layer(model, layer_index, filter_index):
             padding = conv.padding,
             dilation = conv.dilation,
             groups = conv.groups,
-            bias = conv.bias) #(out_channels)
+            bias = conv.bias is not None) #(out_channels)
 
     old_weights = conv.weight.data.cpu().numpy() # (out_channels, in_channels, kernel_size[0], kernel_size[1]
     new_weights = new_conv.weight.data.cpu().numpy()
@@ -201,7 +201,7 @@ def prune_vggbase_conv_layer(model, layer_index, filter_index):
                 padding = next_conv.padding,
                 dilation = next_conv.dilation,
                 groups = next_conv.groups,
-                bias = next_conv.bias)
+                bias = next_conv.bias is not None)
 
         old_weights = next_conv.weight.data.cpu().numpy()
         new_weights = next_new_conv.weight.data.cpu().numpy()
