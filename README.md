@@ -154,18 +154,22 @@ jupyter notebook
 ## TODO
 We have accumulated the following to-do list, which we hope to complete in the near future
 - Still to come:
-  * [x] Support for the MS COCO dataset
+  * [ ] Support for the MS COCO dataset
+  * [ ] Support for the WEISHI dataset
+  * [ ] Change backbone of refineDet to resnet
   * [ ] Support for SSD512 training and testing
-  * [ ] Support for training on custom datasets
 
 ## Authors
 
+* [**Xuhua HUANG**](https://github.com/XUHUAKing)
 * [**Max deGroot**](https://github.com/amdegroot)
 * [**Ellis Brown**](http://github.com/ellisbrown)
 
 ***Note:*** Unfortunately, this is just a hobby of ours and not a full-time job, so we'll do our best to keep things up to date, but no guarantees.  That being said, thanks to everyone for your continued help and feedback as it is really appreciated. We will try to address everything as soon as possible.
 
 ## References
+- Jaco. "PyTorch Implementation of [1611.06440] Pruning Convolutional Neural Networks for Resource Efficient Inference." https://github.com/jacobgil/pytorch-pruningReferences
+- Implementation of Variants of SSD Model. https://github.com/lzx1413/PytorchSSD
 - Wei Liu, et al. "SSD: Single Shot MultiBox Detector." [ECCV2016]((http://arxiv.org/abs/1512.02325)).
 - [Original Implementation (CAFFE)](https://github.com/weiliu89/caffe/tree/ssd)
 - A huge thank you to [Alex Koltun](https://github.com/alexkoltun) and his team at [Webyclip](webyclip.com) for their help in finishing the data augmentation portion.
