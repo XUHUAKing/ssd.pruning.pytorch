@@ -2,6 +2,7 @@ from __future__ import print_function
 """
     Model evaluation on VOC for refineDet separately
     Execute: python3 eval_voc_refineDet.py --trained_model weights/_your_trained_refineDet_model_.pth
+    (Take care of different versions of .pth file, can be solved by changing state_dict)
 """
 
 import torch
@@ -164,8 +165,8 @@ def test_net(save_folder, net, detector, priors, cuda,
                     all_boxes[j][i] = all_boxes[j][i][keep, :]
 
         nms_time = _t['misc'].toc()
-
-        print('im_detect: {:d}/{:d} {:.3f}s {:.3f}s'.format(i + 1, num_images, detect_time, nms_time))
+        if (i + 1) % 100 == 0:
+            print('im_detect: {:d}/{:d} {:.3f}s {:.3f}s'.format(i + 1, num_images, detect_time, nms_time))
 
     #write the detection results into det_file
     with open(det_file, 'wb') as f:

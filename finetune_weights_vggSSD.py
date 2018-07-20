@@ -97,7 +97,8 @@ def test_net(save_folder, net, cuda,
                                                                  copy=False)
             all_boxes[j][i] = cls_dets #[class][imageID] = 1 x 5 where 5 is box_coord + score
 
-        print('im_detect: {:d}/{:d} {:.3f}s'.format(i + 1, num_images, detect_time))
+        if (i + 1) % 100 == 0:
+            print('im_detect: {:d}/{:d} {:.3f}s'.format(i + 1, num_images, detect_time))
 
     #write the detection results into det_file
     with open(det_file, 'wb') as f:
@@ -219,7 +220,7 @@ class PrunningFineTuner_vggSSD:
                     lr=0.0001, momentum=0.9, weight_decay=5e-4)
 
         for i in range(epoches):
-            print("FineTune... Epoch: ", i)
+            print("FineTune... Epoch: ", i+1)
             self.train_epoch(optimizer) # no need for rank_filters
             self.test()
         print("Finished fine tuning.")

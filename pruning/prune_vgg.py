@@ -22,6 +22,7 @@ Handle Cases: < : layers be affected
     2. Conv< + BN< + Pool + Conv<
     3. Conv< + BN< + Conv< + BN
     4. Tree paths
+Adapted from: https://github.com/jacobgil/pytorch-pruning
 '''
 def prune_vgg16_conv_layer(model, layer_index, filter_index):
     _, conv = model.features._modules.items()[layer_index]

@@ -2,11 +2,7 @@ from __future__ import print_function
 """
     Model evaluation on VOC for vggSSD/resnetSSD separately
     Execute: python3 eval_voc_vggresSSD.py --trained_model weights/_your_trained_SSD_model_.pth
-"""
-"""Adapted from:
-    @longcw faster_rcnn_pytorch: https://github.com/longcw/faster_rcnn_pytorch
-    @rbgirshick py-faster-rcnn https://github.com/rbgirshick/py-faster-rcnn
-    Licensed under The MIT License [see LICENSE for details]
+    (Take care of different versions of .pth file, can be solved by changing state_dict)
 """
 
 import torch
@@ -137,9 +133,9 @@ def test_net(save_folder, net, cuda,
                                   scores[:, np.newaxis])).astype(np.float32,
                                                                  copy=False)
             all_boxes[j][i] = cls_dets #[class][imageID] = 1 x 5 where 5 is box_coord + score
-
-        print('im_detect: {:d}/{:d} {:.3f}s'.format(i + 1,
-                                                    num_images, detect_time))
+        if (i + 1) % 100 == 0:
+            print('im_detect: {:d}/{:d} {:.3f}s'.format(i + 1,
+                                                        num_images, detect_time))
 
     #write the detection results into det_file
     with open(det_file, 'wb') as f:

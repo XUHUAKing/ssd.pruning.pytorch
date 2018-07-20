@@ -368,7 +368,7 @@ def test_net(save_folder, net, cuda,
                                                                  copy=False)
             all_boxes[j][i] = cls_dets #[class][imageID] = 1 x 5 where 5 is box_coord + score
 
-        if i % 100 == 0:
+        if (i + 1) % 100 == 0:
             print('im_detect: {:d}/{:d} {:.3f}s'.format(i + 1,
                                                         num_images, detect_time)) # nms time is included in detect_time for normal SSD
 

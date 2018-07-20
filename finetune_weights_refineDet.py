@@ -125,7 +125,8 @@ def test_net(save_folder, net, detector, priors, cuda,
 
         nms_time = _t['misc'].toc()
 
-        print('im_detect: {:d}/{:d} {:.3f}s {:.3f}s'.format(i + 1, num_images, detect_time, nms_time))
+        if (i + 1) % 100 == 0:
+            print('im_detect: {:d}/{:d} {:.3f}s {:.3f}s'.format(i + 1, num_images, detect_time, nms_time))
 
     #write the detection results into det_file
     with open(det_file, 'wb') as f:
@@ -252,7 +253,7 @@ class PrunningFineTuner_refineDet:
                     lr=0.0001, momentum=0.9, weight_decay=5e-4)
 
         for i in range(epoches):
-            print("FineTune... Epoch: ", i)
+            print("FineTune... Epoch: ", i+1)
             self.train_epoch(optimizer) # no need for rank filters
             self.test()
         print("Finished fine tuning.")
