@@ -183,6 +183,12 @@ def train():
         iter_plot = create_vis_plot('Iteration', 'Loss', vis_title, vis_legend)
         epoch_plot = create_vis_plot('Epoch', 'Loss', vis_title, vis_legend)
 
+    # adjust learning rate based on epoch
+    stepvalues_VOC = (150 * epoch_size, 200 * epoch_size, 250 * epoch_size)
+    stepvalues_COCO = (90 * epoch_size, 120 * epoch_size, 140 * epoch_size)
+    stepvalues = (stepvalues_VOC,stepvalues_COCO)[args.dataset=='COCO']
+    step_index = 0
+
     # training data loader
     data_loader = data.DataLoader(dataset, args.batch_size,
                                   num_workers=args.num_workers,
@@ -190,7 +196,7 @@ def train():
                                   pin_memory=True)
     # create batch iterator
     batch_iterator = iter(data_loader)
-    for iteration in range(args.start_iter, cfg['max_epoch']*epoch_size):
+    for iteration in range(args.start_iter, cfg['max_epoch']*epoch_size + 10):
         try:
             images, targets = next(batch_iterator)
         except StopIteration:
@@ -205,8 +211,7 @@ def train():
             conf_loss = 0
 
         if iteration != 0 and (iteration % epoch_size == 0):
-            adjust_learning_rate(optimizer, args.gamma, epoch)
-            epoch += 1
+            # adjust_learning_rate(optimizer, args.gamma, epoch)
             # evaluation during training
             if args.evaluate == True:
                 # load net
@@ -222,6 +227,12 @@ def train():
                              top_k, thresh=args.confidence_threshold)
 
                 net.train()
+            epoch += 1
+
+        # update learning rate
+        if iteration in stepvalues:
+            step_index  = stepvalues.index(iteration) + 1
+        lr = adjust_learning_rate(optimizer, args.gamma, epoch, step_index, iteration, epoch_size)
 
         if args.cuda:
             images = Variable(images.cuda())
@@ -243,8 +254,10 @@ def train():
         conf_loss += loss_c.data[0]
 
         if iteration % 10 == 0:
-            print('timer: %.4f sec.' % (t1 - t0))
-            print('iter ' + repr(iteration) + ' || Loss: %.4f ||' % (loss.data[0]), end=' ')
+            print('Epoch:' + repr(epoch) + ' || epochiter: ' + repr(iteration % epoch_size) + '/' + repr(epoch_size)
+                  + '|| Total iter ' +
+                  repr(iteration) + ' || Loc: %.4f Conf: %.4f||' % (loss_l, loss_c) +
+                'Timer: %.4f sec. ||' % (t1 - t0) + 'Loss: %.4f ||' % (loss.data[0]) + 'LR: %.8f' % (lr))
 
         if args.visdom:
             update_vis_plot(iteration, loss_l.data[0], loss_c.data[0],
@@ -257,16 +270,18 @@ def train():
     torch.save(ssd_net.state_dict(),
                args.save_folder + '' + args.dataset + '.pth')
 
-def adjust_learning_rate(optimizer, gamma, epoch):
-    """Sets the learning rate to the initial LR decayed by 10 at
-        specified epoch
+def adjust_learning_rate(optimizer, gamma, epoch, step_index, iteration, epoch_size):
+    """Sets the learning rate
     # Adapted from PyTorch Imagenet example:
     # https://github.com/pytorch/examples/blob/master/imagenet/main.py
     """
-    step = epoch//args.lr_step # every 30 epoch by default
-    lr = args.lr * (gamma ** (step))
+    if epoch < args.warm_epoch:
+        lr = 1e-6 + (args.lr-1e-6) * iteration / (epoch_size * args.warm_epoch)
+    else:
+        lr = args.lr * (gamma ** (step_index))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
+    return lr
 
 def xavier(param):
     init.xavier_uniform(param)
