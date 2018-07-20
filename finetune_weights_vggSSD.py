@@ -322,9 +322,9 @@ class PrunningFineTuner_vggSSD:
 
 
         print("Finished. Going to fine tune the model a bit more")
-        self.train(optimizer, epoches = 10) #15
+        self.train(optimizer, epoches = 5) #15
         print('Saving pruned model...')
-        torch.save(self.model, 'prunes/vggSSD_prunned.pth')
+        torch.save(self.model, 'prunes/vggSSD_prunned')
         #torch.save(model, "model_prunned")
 
 if __name__ == '__main__':
@@ -338,20 +338,22 @@ if __name__ == '__main__':
     if args.train:
         model = build_ssd('train', cfg['min_dim'], cfg['num_classes'], base='vgg').cuda()
     elif args.prune:
-        #model = torch.load("model").cuda()
+        # ------------------------------------------- 1st prune: load model from state_dict
         model = build_ssd('train', cfg['min_dim'], cfg['num_classes'], base='vgg').cuda()
         state_dict = torch.load(args.trained_model)
         from collections import OrderedDict
         new_state_dict = OrderedDict()
         for k, v in state_dict.items():
-            head = k[:7]
-            if head == 'module.':
-                name = k[7:] # remove `module.` because you store the model without DataParallel
+            head = k[:7] # head = k[:4]
+            if head == 'module.': # head == 'vgg.', module. is due to DataParellel
+                name = k[7:]  # name = 'base.' + k[4:]
             else:
                 name = k
             new_state_dict[name] = v
         model.load_state_dict(new_state_dict)
         #model.load_state_dict(torch.load(args.trained_model))
+        # ------------------------------------------- >= 2nd prune: load model from previous pruning
+        # model = torch.load(args.trained_model).cuda()
 
     dataset = VOCDetection(root=args.dataset_root,
                            transform=SSDAugmentation(cfg['min_dim'], cfg['dataset_mean']))
