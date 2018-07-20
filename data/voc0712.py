@@ -14,6 +14,10 @@ import torch
 import torch.utils.data as data
 import torchvision.transforms as transforms
 import cv2
+cv2.setNumThreads(0) # pytorch issue 1355: possible deadlock in DataLoader
+# OpenCL may be enabled by default in OpenCV3;
+# disable it because it because it's not thread safe and causes unwanted GPU memory allocations
+cv2.ocl.setUseOpenCL(False)
 import numpy as np
 from .voc_eval import voc_eval
 

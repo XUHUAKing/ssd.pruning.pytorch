@@ -2,6 +2,10 @@ from __future__ import print_function
 import torch
 from torch.autograd import Variable
 import cv2
+cv2.setNumThreads(0) # pytorch issue 1355: possible deadlock in DataLoader
+# OpenCL may be enabled by default in OpenCV3;
+# disable it because it because it's not thread safe and causes unwanted GPU memory allocations
+cv2.ocl.setUseOpenCL(False)
 import time
 from imutils.video import FPS, WebcamVideoStream
 import argparse

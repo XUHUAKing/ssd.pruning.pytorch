@@ -1,6 +1,10 @@
 import os
 import shutil
 import cv2
+cv2.setNumThreads(0) # pytorch issue 1355: possible deadlock in DataLoader
+# OpenCL may be enabled by default in OpenCV3;
+# disable it because it because it's not thread safe and causes unwanted GPU memory allocations
+cv2.ocl.setUseOpenCL(False)
 import math
 import xml.dom.minidom as suck
 import sys
@@ -22,17 +26,17 @@ def check(jpg, xml, output_path):
 	flag = False
 	if xml_size != img_size:
 		raise Exception('@shape_is_not_right')
-	
+
 	for object in objects:
 		item = object.getElementsByTagName('name')[0].childNodes[0].data
 		xmin = math.floor(float(object.getElementsByTagName('xmin')[0].childNodes[0].data))
 		xmax = math.ceil(float(object.getElementsByTagName('xmax')[0].childNodes[0].data))
 		ymin = math.floor(float(object.getElementsByTagName('ymin')[0].childNodes[0].data))
 		ymax = math.ceil(float(object.getElementsByTagName('ymax')[0].childNodes[0].data))
-		
+
 		if xmin < 0 or ymin < 0 or xmax > xml_size[1] or ymax > xml_size[0] or xmax < xmin or ymax < ymin:
 			raise Exception('@object_out_of_scope')
-		
+
 		cate_set.add(item)
 		if flag == False:
 			with open('checkxml_list.txt', 'a', encoding='utf-8') as outer:
@@ -43,12 +47,12 @@ def check(jpg, xml, output_path):
 		outfile = os.path.join(output_path, item)
 		if not os.path.exists(outfile):
 			os.makedirs(outfile)
-		
+
 		if item not in mp:
 			mp[item] = 0
 		num = mp[item]
 		mp[item] = num + 1
-		
+
 		source = '.'.join(xml.split('/')[-1].split('.')[:-1])
 		name = '_'.join([source, item, str(num)]) + '.jpg'
 		img2 = img[ymin:ymax, xmin:xmax]
@@ -116,4 +120,3 @@ def main():
 
 if __name__ == "__main__":
 	main()
-

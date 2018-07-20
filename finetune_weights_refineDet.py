@@ -6,6 +6,10 @@ import torch
 from torch.autograd import Variable
 #from torchvision import models
 import cv2
+cv2.setNumThreads(0) # pytorch issue 1355: possible deadlock in DataLoader
+# OpenCL may be enabled by default in OpenCV3;
+# disable it because it because it's not thread safe and causes unwanted GPU memory allocations
+cv2.ocl.setUseOpenCL(False)
 import sys
 import numpy as np
 import torchvision
@@ -345,10 +349,10 @@ class PrunningFineTuner_refineDet:
             # otimizer and loss set-up
             optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
 
-            self.train(optimizer, epoches = 10)
+            self.train(optimizer, epoches = 5) # 10
 
         print("Finished. Going to fine tune the model a bit more")
-        self.train(optimizer, epoches = 15)
+        self.train(optimizer, epoches = 10) # 15
         print('Saving pruned model...')
         torch.save(self.model, 'prunes/refineDet_prunned')
         #torch.save(model, "model_prunned")

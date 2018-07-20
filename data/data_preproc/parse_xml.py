@@ -6,6 +6,10 @@ https://github.com/fmassa/vision/blob/voc_dataset/torchvision/datasets/voc.py
 Updated by: Ellis Brown, Max deGroot
 """
 import cv2
+cv2.setNumThreads(0) # pytorch issue 1355: possible deadlock in DataLoader
+# OpenCL may be enabled by default in OpenCV3;
+# disable it because it because it's not thread safe and causes unwanted GPU memory allocations
+cv2.ocl.setUseOpenCL(False)
 import sys
 import numpy as np
 if sys.version_info[0] == 2:
