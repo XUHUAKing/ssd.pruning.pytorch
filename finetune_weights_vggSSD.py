@@ -23,6 +23,7 @@ import time
 import pickle
 import os
 from data import *
+from data import VOC_CLASSES as labelmap
 import torch.utils.data as data
 from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
@@ -229,8 +230,12 @@ class PrunningFineTuner_vggSSD:
         self.model.zero_grad() # same as optimizer.zero_grad() when SGD() get model.parameters
         # input = Variable(batch)
         input = batch
+        # make priors cuda()
+        loc_, conf_, priors_ = self.model(input)
+        if args.cuda:
+            priors_ = priors_.cuda()
 
-        loss_l, loss_c = self.criterion(self.model(input), label)
+        loss_l, loss_c = self.criterion((loc_, conf_, priors_), label)
         loss = loss_l + loss_c
         loss.backward()
         optimizer.step() # update params
@@ -258,7 +263,7 @@ class PrunningFineTuner_vggSSD:
         filters = 0
         fork_indices = [21, 33]# len(self.model.base)-1]
         for layer, (name, module) in enumerate(self.model.base._modules.items()):
-            if isinstance(module, torch.nn.modules.conv.Conv2d) and (layer not in fork_indices)
+            if isinstance(module, torch.nn.modules.conv.Conv2d) and (layer not in fork_indices)\
                 and (not module.weight.data.size(0) <= 1):
                 filters = filters + module.out_channels
         return filters
@@ -286,7 +291,7 @@ class PrunningFineTuner_vggSSD:
         for iteration in range(iterations):
             print("Ranking filters.. ")
             prune_targets = self.get_candidates_to_prune(num_filters_to_prune_per_iteration)
-            layers_prunned = {}
+            layers_prunned = {} # count the numbe of filters pruned for each layer
             for layer_index, filter_index in prune_targets:
                 if layer_index not in layers_prunned:
                     layers_prunned[layer_index] = 0

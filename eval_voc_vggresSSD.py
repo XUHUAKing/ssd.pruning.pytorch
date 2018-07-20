@@ -153,7 +153,7 @@ if __name__ == '__main__':
     num_classes = len(labelmap)                      # +1 for background
     net = build_ssd('test', 300, num_classes, base='vgg') # initialize SSD (vgg/resnet)
     '''
-    # load resume network
+    # load resume SSD network
     state_dict = torch.load(args.trained_model)
     from collections import OrderedDict
     new_state_dict = OrderedDict()

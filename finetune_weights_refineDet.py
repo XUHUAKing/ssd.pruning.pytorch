@@ -23,10 +23,10 @@ import time
 import pickle
 import os
 from data import * # BaseTransform
-from layers.box_utils import refine_nms # for detection in test_net for RefineDet
 from data import VOC_CLASSES as labelmap
 import torch.utils.data as data
 from utils.augmentations import SSDAugmentation
+from layers.box_utils import refine_nms # for detection in test_net for RefineDet
 from layers.modules import RefineMultiBoxLoss
 from layers.functions import RefineDetect, PriorBox
 from models.RefineSSD_vgg import build_refine
@@ -50,7 +50,7 @@ cfg = voc320
 
 # different from normal ssd, where the PriorBox is stored inside SSD object
 priorbox = PriorBox(cfg)
-priors = Variable(priorbox.forward().cuda(), volatile=True)
+priors = Variable(priorbox.forward().cuda(), volatile=True) # set the priors to cuda
 detector = RefineDetect(cfg['num_classes'], 0, cfg, object_score=0.01)
 
 def test_net(save_folder, net, detector, priors, cuda,
@@ -293,7 +293,7 @@ class PrunningFineTuner_refineDet:
         filters = 0
         fork_indices = [21, 28, 33]# len(self.model.base)-1]
         for layer, (name, module) in enumerate(self.model.base._modules.items()):
-            if isinstance(module, torch.nn.modules.conv.Conv2d) and (layer not in fork_indices)
+            if isinstance(module, torch.nn.modules.conv.Conv2d) and (layer not in fork_indices)\
                 and (not module.weight.data.size(0) <= 1):
                 filters = filters + module.out_channels
         return filters
