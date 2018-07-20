@@ -276,7 +276,8 @@ class PrunningFineTuner_refineDet:
         num_batch = 0
         for batch, label in self.train_data_loader:
             num_batch += 1
-            print("Training batch ", num_batch, "...")
+            if num_batch % 50 == 0:
+                print("Training batch " + repr(num_batch) + "/" + repr(len(self.train_data_loader)-1) + "...")
             batch = Variable(batch.cuda())
             label = [Variable(ann.cuda(), volatile=True) for ann in label]
             self.train_batch(optimizer, batch, label)

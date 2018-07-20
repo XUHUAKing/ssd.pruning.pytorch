@@ -245,7 +245,8 @@ class PrunningFineTuner_vggSSD:
         num_batch = 0
         for batch, label in self.train_data_loader:
             num_batch += 1
-            print("Training batch ", num_batch, "...")
+            if num_batch % 50 == 0:
+                print("Training batch " + repr(num_batch) + "/" + repr(len(self.train_data_loader)-1) + "...")
             batch = Variable(batch.cuda())
             label = [Variable(ann.cuda(), volatile=True) for ann in label]
             self.train_batch(optimizer, batch, label)
@@ -353,7 +354,7 @@ if __name__ == '__main__':
                                 transform=BaseTransform(cfg['min_dim'], cfg['testset_mean']))
     data_loader = data.DataLoader(dataset, 32, num_workers=4,
                                   shuffle=True, collate_fn=detection_collate,
-                                  pin_memory=True)
+                                  pin_memory=True) #len(data_loader) == 518
 
     criterion = MultiBoxLoss(cfg['num_classes'], 0.5, True, 0, True, 3, 0.5, False, args.cuda)
 
