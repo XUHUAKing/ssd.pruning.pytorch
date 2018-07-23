@@ -2,6 +2,7 @@
     Train + Test SSD model with vgg backbone
     Execute: python3 train_test_vggSSD.py --evaluate True (testing while training)
     Execute: python3 train_test_vggSSD.py (only training)
+    Status: checked
 '''
 from data import *
 from utils.augmentations import SSDAugmentation

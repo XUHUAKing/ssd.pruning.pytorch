@@ -3,6 +3,7 @@ from __future__ import print_function
     Model evaluation on VOC for vggSSD/resnetSSD separately
     Execute: python3 eval_voc_vggresSSD.py --trained_model weights/_your_trained_SSD_model_.pth
     (Take care of different versions of .pth file, can be solved by changing state_dict)
+    Status: checked (vgg + resnet)
 """
 
 import torch
@@ -151,7 +152,9 @@ def test_net(save_folder, net, cuda,
 if __name__ == '__main__':
     # load net
     num_classes = len(labelmap)                      # +1 for background
-    net = build_ssd('test', 300, num_classes, base='vgg') # initialize SSD (vgg/resnet)
+    net = build_ssd('test', 300, num_classes, base='vgg') # initialize SSD (vgg)
+    # net = build_ssd('test', 300, num_classes, base='resnet') # initialize SSD (resnet)
+    # if you want to eval SSD from original version ssd.pytorch because self.vgg was changed to self.base
     '''
     # load resume SSD network
     state_dict = torch.load(args.trained_model)
