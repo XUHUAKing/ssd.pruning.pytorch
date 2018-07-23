@@ -2,6 +2,7 @@
     Train + Test SSD model with resnet backbone
     Execute: python3 train_test_resnetSSD.py --evaluate True (testing while training)
     Execute: python3 train_test_resnetSSD.py (only training)
+    Author: xuhuahuang as intern in YouTu 07/2018
     Status: checked
 '''
 from data import *

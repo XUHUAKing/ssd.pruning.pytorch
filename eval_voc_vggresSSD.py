@@ -3,6 +3,7 @@ from __future__ import print_function
     Model evaluation on VOC for vggSSD/resnetSSD separately
     Execute: python3 eval_voc_vggresSSD.py --trained_model weights/_your_trained_SSD_model_.pth
     (Take care of different versions of .pth file, can be solved by changing state_dict)
+    Author: xuhuahuang as intern in YouTu 07/2018
     Status: checked (vgg + resnet)
 """
 

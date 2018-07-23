@@ -156,9 +156,6 @@ class SSD_RESNET(nn.Module):
         self.softmax = nn.Softmax(dim=-1)
         self.detect = Detect(num_classes, 0, self.cfg, 200, 0.01, 0.45)
 
-        # store the features (i.e. layers) in nn.ModuleList for pruning
-        self.features = nn.ModuleList(base + extras + head[0] + head[1]) # base layers, extra layers, loc conv, conf conv
-
     def forward(self, x, test=False):
         """Applies network layers and ops on input image(s) x.
         """
@@ -197,8 +194,7 @@ class SSD_RESNET(nn.Module):
         if test:
             output = self.detect(
                 loc.view(loc.size(0), -1, 4),                   # loc preds
-                self.softmax(conf.view(conf.size(0), -1,
-                             self.num_classes)),                # conf preds
+                self.softmax(conf.view(conf.size(0), -1, self.num_classes)),                # conf preds
                 self.priors.type(type(x.data))                  # default boxes
             )
         else:

@@ -1,6 +1,7 @@
 '''
-    Use absolute weights-based criterion for filter pruning on refineDet(vgg)
+    Use absolute weights-based criterion for filter pruning on refineDet(vgg) (Train/Test on VOC)
     Execute: python3 finetune_weights_refineDet.py --prune --trained_model weights/_your_trained_model_.pth
+    Author: xuhuahuang as intern in YouTu 07/2018
 '''
 import torch
 from torch.autograd import Variable
@@ -49,7 +50,6 @@ parser.set_defaults(train=False)
 parser.set_defaults(prune=False)
 args = parser.parse_args()
 
-dataset_mean = (104, 117, 123)
 cfg = voc320
 
 # different from normal ssd, where the PriorBox is stored inside SSD object
@@ -384,6 +384,7 @@ if __name__ == '__main__':
         #model.load_state_dict(torch.load(args.trained_model))
         # ------------------------------------------- >= 2nd prune: load model from previous pruning
         # model = torch.load(args.trained_model).cuda()
+    print('Finished loading model!')
 
     dataset = VOCDetection(root=args.dataset_root,
                            transform=SSDAugmentation(cfg['min_dim'], cfg['dataset_mean']))

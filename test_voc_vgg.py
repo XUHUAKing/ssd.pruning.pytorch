@@ -1,4 +1,8 @@
 from __future__ import print_function
+'''
+    This file is from original ssd.pytorch version for outputing predictions and ground truths for comparison
+    (* Not used for ssd.pytorch.tencent version edited by xuhuahuang in 07/2018)
+'''
 import sys
 import os
 import argparse
