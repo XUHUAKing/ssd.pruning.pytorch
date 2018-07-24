@@ -18,7 +18,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 #import dataset
-from pruning.prune_resnet import *
+from pruning.prune_tools import *
 import argparse
 from operator import itemgetter
 from heapq import nsmallest #heap queue algorithm
@@ -43,6 +43,7 @@ parser.add_argument("--prune", dest="prune", action="store_true")
 parser.add_argument("--prune_folder", default = "prunes/")
 parser.add_argument("--trained_model", default = "prunes/vggSSD_trained.pth")
 parser.add_argument('--dataset_root', default=VOC_ROOT)
+parser.add_argument("--cut_ratio", default=0.2, type=int)
 parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to train model')
 parser.set_defaults(train=False)
 parser.set_defaults(prune=False)
@@ -112,3 +113,60 @@ def test_net(save_folder, net, cuda,
     APs,mAP = testset.evaluate_detections(all_boxes, save_folder)
 
 # --------------------------------------------------------------------------- Pruning Part
+class PrunningFineTuner_resnetSSD:
+    def __init__(self, train_loader, testset, criterion, model):
+        self.train_data_loader = train_loader
+        self.testset = testset
+
+        self.model = model
+        self.criterion = criterion
+        self.model.train()
+
+    def test(self):
+        self.model.eval()
+        # evaluation
+        test_net('prunes/test', self.model, args.cuda, testset,
+                 BaseTransform(self.model.size, cfg['dataset_mean']),
+                 300, thresh=0.01)
+
+        self.model.train()
+
+    # epoches: fine tuning for this epoches
+    def train(self, optimizer = None, epoches = 5):
+        if optimizer is None:
+            optimizer = \
+                optim.SGD(self.model.parameters(),
+                    lr=0.0001, momentum=0.9, weight_decay=5e-4)
+
+        for i in range(epoches):
+            print("FineTune... Epoch: ", i+1)
+            self.train_epoch(optimizer) # no need for rank_filters
+            self.test()
+        print("Finished fine tuning.")
+
+    # batch: images, label: targets
+    def train_batch(self, optimizer, batch, label):
+        # set gradients of all model parameters to zero
+        self.model.zero_grad() # same as optimizer.zero_grad() when SGD() get model.parameters
+        # input = Variable(batch)
+        input = batch
+        # make priors cuda()
+        loc_, conf_, priors_ = self.model(input)
+        if args.cuda:
+            priors_ = priors_.cuda()
+
+        loss_l, loss_c = self.criterion((loc_, conf_, priors_), label)
+        loss = loss_l + loss_c
+        loss.backward()
+        optimizer.step() # update params
+
+    # train for one epoch, so the data_loader will not pop StopIteration error
+    def train_epoch(self, optimizer = None):
+        num_batch = 0
+        for batch, label in self.train_data_loader:
+            num_batch += 1
+            if num_batch % 50 == 0:
+                print("Training batch " + repr(num_batch) + "/" + repr(len(self.train_data_loader)-1) + "...")
+            batch = Variable(batch.cuda())
+            label = [Variable(ann.cuda(), volatile=True) for ann in label]
+            self.train_batch(optimizer, batch, label)

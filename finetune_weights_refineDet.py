@@ -18,7 +18,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 #import dataset
-from pruning.prune_vgg import *
+from pruning.prune_tools import *
 import argparse
 from operator import itemgetter
 from heapq import nsmallest #heap queue algorithm
@@ -45,6 +45,7 @@ parser.add_argument("--prune", dest="prune", action="store_true")
 parser.add_argument("--prune_folder", default = "prunes/")
 parser.add_argument("--trained_model", default = "prunes/refineDet_trained.pth")
 parser.add_argument('--dataset_root', default=VOC_ROOT)
+parser.add_argument("--cut_ratio", default=0.2, type=int)
 parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to train model')
 parser.set_defaults(train=False)
 parser.set_defaults(prune=False)
@@ -150,9 +151,6 @@ class PrunningFineTuner_refineDet:
         self.odm_criterion = odm_criterion
         self.model.train()
 
-    def rank(self):
-        self.prunner.rank()
-
     def test(self):
         self.model.eval()
         # evaluation
@@ -221,12 +219,13 @@ class PrunningFineTuner_refineDet:
                 self.test()
 
                 # print("Fine tuning to recover from prunning iteration.")
-                # optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
+                optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
                 # self.train(optimizer, epoches = 5) # 10
 
         print("Finished. Going to fine tune the model a bit more")
-        self.train(optimizer, epoches = 5) # 15
+        self.train(optimizer, epoches = 10) # 15
         print('Saving pruned model...')
+        print(self.model)
         torch.save(self.model, 'prunes/refineDet_prunned')
 
 if __name__ == '__main__':

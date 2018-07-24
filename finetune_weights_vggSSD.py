@@ -192,12 +192,13 @@ class PrunningFineTuner_vggSSD:
                 self.test()
 
                 # print("Fine tuning to recover from prunning one layer.")
-                # optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
+                optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
                 # self.train(optimizer, epoches = 5) # 10
 
         print("Finished. Going to fine tune the model a bit more")
-        self.train(optimizer, epoches = 5) #15
+        self.train(optimizer, epoches = 10) #15
         print('Saving pruned model...')
+        print(self.model) # check the dimension after prunning
         torch.save(self.model, 'prunes/vggSSD_prunned')
 
 if __name__ == '__main__':
