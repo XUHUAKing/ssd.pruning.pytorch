@@ -6,6 +6,7 @@
     4. prune_resnet_lconv_layer_with_bn
     5. prune_rbconv_by_indices_no_bn (rbconv means right path's bottom layer)
     6. prune_rbconv_by_indices_with_bn
+    Author: xuhuahuang as intern in YouTu 07/2018
 '''
 import torch
 from torch.autograd import Variable
@@ -31,6 +32,7 @@ def replace_layers(model, i, indexes, layers):
         model: model for pruning
         layer_index: index the pruned layer's location within model
         cut_ratio: the ratio of filters you want to prune from this layer (e.g. 20% - cut 20% lowest weights layers)
+     Adapted from: https://github.com/jacobgil/pytorch-pruning
 '''
 def prune_conv_layer_no_bn(model, layer_index, cut_ratio=0.2):
     _, conv = list(model.base._modules.items())[layer_index]
