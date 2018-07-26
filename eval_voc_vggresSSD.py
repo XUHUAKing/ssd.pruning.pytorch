@@ -12,7 +12,8 @@ import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.autograd import Variable
 from data import *
-from data import VOC_CLASSES as labelmap
+# from data import VOC_CLASSES as labelmap
+from data import XL_CLASSES as labelmap # for VOC_xlab_products dataset
 import torch.utils.data as data
 
 from models.SSD_vggres import build_ssd
@@ -52,7 +53,8 @@ parser.add_argument('--top_k', default=5, type=int,
                     help='Further restrict the number of predictions to parse')
 parser.add_argument('--cuda', default=True, type=str2bool,
                     help='Use cuda to train model')
-parser.add_argument('--voc_root', default=VOC_ROOT,
+# for VOC_xlab_products dataset
+parser.add_argument('--voc_root', default= XL_ROOT, #VOC_ROOT
                     help='Location of VOC root directory')
 parser.add_argument('--cleanup', default=True, type=str2bool,
                     help='Cleanup and remove results files following eval')
@@ -72,14 +74,8 @@ if torch.cuda.is_available():
 else:
     torch.set_default_tensor_type('torch.FloatTensor')
 
-annopath = os.path.join(args.voc_root, 'VOC2007', 'Annotations', '%s.xml')
-imgpath = os.path.join(args.voc_root, 'VOC2007', 'JPEGImages', '%s.jpg')
-imgsetpath = os.path.join(args.voc_root, 'VOC2007', 'ImageSets',
-                          'Main', '{:s}.txt')
-YEAR = '2007'
-devkit_path = args.voc_root + 'VOC' + YEAR
-dataset_mean = (104, 117, 123)
 set_type = 'test'
+cfg = voc
 
 # test function for vggSSD
 """
@@ -175,13 +171,13 @@ if __name__ == '__main__':
     net.eval()
     print('Finished loading model!')
     # load data
-    dataset = VOCDetection(args.voc_root, [('2007', set_type)],
-                           BaseTransform(300, dataset_mean),
+    dataset = VOCDetection(args.voc_root, [set_type], #[('2007', set_type)], for VOC_xlab_products dataset
+                           BaseTransform(300, cfg['dataset_mean']),
                            VOCAnnotationTransform())
     if args.cuda:
         net = net.cuda()
         cudnn.benchmark = True
     # evaluation
     test_net(args.save_folder, net, args.cuda, dataset,
-             BaseTransform(net.size, dataset_mean), args.top_k,
+             BaseTransform(net.size, cfg['dataset_mean']), args.top_k,
              thresh=args.confidence_threshold)

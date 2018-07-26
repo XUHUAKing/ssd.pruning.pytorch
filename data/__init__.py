@@ -1,4 +1,5 @@
 from .voc0712 import VOCDetection, VOCAnnotationTransform, VOC_CLASSES
+from .vocXLab import XLDetection, XLAnnotationTransform, XL_CLASSES
 from .weishi import WeishiDetection, WeishiAnnotationTransform, WEISHI_CLASSES
 from .coco import COCODetection, COCOAnnotationTransform, COCO_CLASSES, get_label_map
 from .config import *

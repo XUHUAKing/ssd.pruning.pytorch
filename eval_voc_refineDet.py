@@ -75,13 +75,6 @@ if torch.cuda.is_available():
 else:
     torch.set_default_tensor_type('torch.FloatTensor')
 
-annopath = os.path.join(args.voc_root, 'VOC2007', 'Annotations', '%s.xml')
-imgpath = os.path.join(args.voc_root, 'VOC2007', 'JPEGImages', '%s.jpg')
-imgsetpath = os.path.join(args.voc_root, 'VOC2007', 'ImageSets',
-                          'Main', '{:s}.txt')
-YEAR = '2007'
-devkit_path = args.voc_root + 'VOC' + YEAR
-dataset_mean = (104, 117, 123)
 set_type = 'test'
 cfg = voc320
 
@@ -209,12 +202,12 @@ if __name__ == '__main__':
     print('Finished loading model!')
     # load data
     dataset = VOCDetection(args.voc_root, [('2007', set_type)],
-                           BaseTransform(320, dataset_mean),
+                           BaseTransform(320, cfg['dataset_mean']),
                            VOCAnnotationTransform())
     if args.cuda:
         net = net.cuda()
         cudnn.benchmark = True
     # evaluation
     test_net(args.save_folder, net, detector, priors, args.cuda, dataset,
-             BaseTransform(net.size, dataset_mean),
+             BaseTransform(net.size, cfg['dataset_mean']),
              args.top_k, thresh=args.confidence_threshold) # 320 originally for cfg['min_dim']

@@ -1,5 +1,5 @@
 # --------------------------------
-# eval tools for VOC dataset
+# eval tools for VOC dataset or other VOC-like dataset
 # --------------------------------
 
 import pickle

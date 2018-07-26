@@ -11,6 +11,7 @@ COLORS = ((255, 0, 0, 128), (0, 255, 0, 128), (0, 0, 255, 128),
 # ---------------- training dataset paths
 # VOC_ROOT = osp.join(HOME, "data/VOCdevkit/")
 VOC_ROOT = '/cephfs/share/data/VOCdevkit/'
+XL_ROOT = '/cephfs/share/data/VOC_xlab_products/'
 #COCO_ROOT = osp.join(HOME, 'data/coco/')
 COCO_ROOT = '/cephfs/share/data/coco_xy/'
 

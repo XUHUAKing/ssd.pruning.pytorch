@@ -1,11 +1,10 @@
 '''
     This file contains functions for pruning in layer level
-    1. prune_conv_layer_no_bn (for resnet normal conv layers (i.e. right path's upper layers) and vgg conv layers)
-    2. prune_conv_layer_with_bn
-    3. prune_resnet_lconv_layer_no_bn (lconv means identity layer)
-    4. prune_resnet_lconv_layer_with_bn
-    5. prune_rbconv_by_indices_no_bn (rbconv means right path's bottom layer)
-    6. prune_rbconv_by_indices_with_bn
+    1. prune_conv_layer (vgg: conv layers)
+
+    2. prune_resnet_lconv_layer (resnet: lconv means identity layer)
+    3. prune_rbconv_by_indices (resnet: rbconv means right path's bottom layer)
+    4. prune_ruconv_layer (resnet: for resnet normal conv layers (i.e. right path's upper layers))
     Author: xuhuahuang as intern in YouTu 07/2018
 '''
 import torch
@@ -18,6 +17,7 @@ cv2.setNumThreads(0) # pytorch issue 1355: possible deadlock in DataLoader
 cv2.ocl.setUseOpenCL(False)
 import sys
 import numpy as np
+from models.resnet import BasicBlock, Bottleneck
 
 def replace_layers(model, i, indexes, layers):
     if i in indexes:
@@ -27,15 +27,17 @@ def replace_layers(model, i, indexes, layers):
     return model[i]
 
 '''
-     1. Prune conv layers without BN (only support layers stored in model.base for now)
+     1. Prune conv layers without/with BN (only support layers stored in model.base for now)
      Args:
         model: model for pruning
         layer_index: index the pruned layer's location within model
         cut_ratio: the ratio of filters you want to prune from this layer (e.g. 20% - cut 20% lowest weights layers)
      Adapted from: https://github.com/jacobgil/pytorch-pruning
 '''
-def prune_conv_layer_no_bn(model, layer_index, cut_ratio=0.2):
+def prune_conv_layer(model, layer_index, cut_ratio=0.2, use_bn = False):
     _, conv = list(model.base._modules.items())[layer_index]
+    if use_bn:
+        _, old_bn = list(model.base._modules.items())[layer_index + 1]
     next_conv = None
     offset = 1
     # search for the next conv, based on current conv with id = (layer_index, filter_index)
@@ -99,6 +101,23 @@ def prune_conv_layer_no_bn(model, layer_index, cut_ratio=0.2):
     bias = np.delete(bias_numpy, filters_to_prune, axis = None)
     new_conv.bias.data = torch.from_numpy(bias).cuda()
 
+    # BatchNorm modification TODO: Extract this function outside as a separate func.
+    if use_bn:
+        new_bn = torch.nn.BatchNorm2d(num_features=new_conv.out_channels, eps=old_bn.eps, momentum=old_bn.momentum, affine=old_bn.affine)
+        # old_bn.affine == True, need to copy learning gamma and beta to new_bn
+        # gamma: size = (num_features)
+        old_weights = old_bn.weight.data.cpu().numpy()
+        new_weights = new_bn.weight.data.cpu().numpy()
+        new_weights = np.delete(old_weights, filters_to_prune)
+        new_bn.weight.data = torch.from_numpy(new_weights).cuda()
+
+        # beta: size = (num_features)
+        bias_numpy = old_bn.bias.data.cpu().numpy()
+        # change size to (out_channels - cut)
+        bias = np.zeros(shape = (bias_numpy.shape[0] - cut), dtype = np.float32)
+        bias = np.delete(bias_numpy, filters_to_prune)
+        new_bn.bias.data = torch.from_numpy(bias).cuda()
+
     # next_conv exists
     if not next_conv is None:
         next_new_conv = \
@@ -120,10 +139,17 @@ def prune_conv_layer_no_bn(model, layer_index, cut_ratio=0.2):
         next_new_conv.bias.data = next_conv.bias.data
 
     if not next_conv is None:
-        # replace current layer and next_conv with new_conv and next_new_conv respectively
-        base = torch.nn.Sequential(
-                *(replace_layers(model.base, i, [layer_index, layer_index+offset], \
-                    [new_conv, next_new_conv]) for i, _ in enumerate(model.base)))
+        if use_bn:
+            # BatchNorm modification
+            base = torch.nn.Sequential(
+                    *(replace_layers(model.base, i, [layer_index, layer_index+1, layer_index+offset], \
+                        [new_conv, new_bn, next_new_conv]) for i, _ in enumerate(model.base)))
+            del old_bn
+        else:
+            # replace current layer and next_conv with new_conv and next_new_conv respectively
+            base = torch.nn.Sequential(
+                    *(replace_layers(model.base, i, [layer_index, layer_index+offset], \
+                        [new_conv, next_new_conv]) for i, _ in enumerate(model.base)))
         del model.base # delete and replace with brand new one
         del conv
 
@@ -137,46 +163,257 @@ def prune_conv_layer_no_bn(model, layer_index, cut_ratio=0.2):
     return model
 
 '''
-     2. Prune conv layers with BN (only support layers stored in model.base for now)
-     Args:
-        model: model for pruning
-        layer_index: index the pruned layer's location within model
-        cut_ratio: the ratio of filters you want to prune from this layer (e.g. 20% - cut 20% lowest weights layers)
-'''
-def prune_conv_layer_with_bn(model, layer_index, cut_ratio=0.2):
-    # TODO: weights of Batch Normalization layer need to be removed
-    pass
-
-'''
-    3. Prune identity conv layers without BN in a resnet block
+    2. Prune identity conv layers without/with BN in a resnet block
+    (*Note: NOT used for normal layer, the 'layer' here must locate inside a block indexed by block_index)
+    Args:
+        block_index: a block also named as a 'layer' in torchvision implementation, locate lconv layer
+        *Note:
+        The index criteria based on 'one single block' unit, which means 1 index represents 1 BasicBlock/Bottleneck, instead of one layer (3-6 blocks)
     Return:
         cut_indices: the filters_to_prune in this layer, will be used in function 5.
 '''
-def prune_resnet_lconv_layer_no_bn(model, block_index, cut_ratio=0.2):
-    pass
+def prune_resnet_lconv_layer(model, block_index, cut_ratio=0.2, use_bn = True):
+    _, blk = list(model.base._modules.items())[block_index]
+    cut_indices = None
+
+    if not use_bn:
+        print("ResNet without BN is not supported for prunning")
+        return cut_indices, model
+
+    # check whether the left path has conv layer for prunning
+    if blk.downsample == None:
+        print("No filters will be prunned because lconv doesn't exist")
+        return cut_indices, model
+
+    if not isinstance(blk, (BasicBlock, Bottleneck)):
+        print("Only support for ResNet with BasicBlock or Bottleneck defined in torchvision")
+        return cut_indices, model
+
+    # get old conv and bn on the left
+    lconv = blk.downsample[0] # nn.Sequential for (lconv, lbn)
+    lbn = blk.downsample[1]
+    next_conv = None
+    next_ds = None # if next one is a block, and this block has downsample path, you need to update both residual and downsample path
+    offset = 1
+    # search for the next conv, can be conv1 within next block, or a normal conv layer
+    while block_index + offset <  len(model.base._modules.items()):
+        res =  list(model.base._modules.items())[block_index+offset] # name, module
+        if isinstance(res[1], torch.nn.modules.conv.Conv2d):
+            next_name, next_conv = res
+            next_is_block = False
+            break
+        elif isinstance(res[1], (BasicBlock, Bottleneck)):
+            next_is_block = True
+            next_blk = res[1]
+            if res[1].downsample == None
+                next_conv = res[1].conv1
+                next_ds = None
+            else:
+                next_conv = res[1].conv1
+                next_ds = res[1].downsample
+            break
+        offset = offset + 1
+
+    num_filters = lconv.weight.data.size(0) # out_channels x in_channels x 3 x 3
+    # skip the layer with only one filter left
+    if num_filters <= 1:
+        print("No filter will be prunned for this layer (num_filters<=1)")
+        return cut_indices, model
+
+    cut = int(cut_ratio * num_filters)
+
+    if cut < 1:
+        print("No filter will be prunned for this layer (cut<1)")
+        return cut_indices, model
+    if (num_filters - cut) < 1:
+        print("No filter will be prunned for this layer (no filter left after cutting)")
+        return cut_indices, model
+
+    # rank the filters within this layer and store into filter_ranks
+    abs_wgt = torch.abs(lconv.weight.data)
+    values = \
+        torch.sum(abs_wgt, dim = 1, keepdim = True).\
+            sum(dim=2, keepdim = True).sum(dim=3, keepdim = True)[:, 0, 0, 0]# .data
+    # Normalize the sum of weight by the filter dimensions in x 3 x 3
+    values = values / (abs_wgt.size(1) * abs_wgt.size(2) * abs_wgt.size(3)) # (filter_number for this layer, 1)
+
+    print("Ranking filters.. ")
+    filters_to_prune = np.argsort(values.cpu().numpy())[:cut] # order from smallest to largest
+    print("Filters that will be prunned", filters_to_prune)
+    print("Pruning filters.. ")
+
+    # the updated conv for old lconv, with cut output channels being pruned
+    new_conv = \
+        torch.nn.Conv2d(in_channels = lconv.in_channels, \
+            out_channels = lconv.out_channels - cut,
+            kernel_size = lconv.kernel_size, \
+            stride = lconv.stride,
+            padding = lconv.padding,
+            dilation = lconv.dilation,
+            groups = lconv.groups,
+            bias = lconv.bias is not None) #(out_channels)
+
+    old_weights = lconv.weight.data.cpu().numpy() # (out_channels, in_channels, kernel_size[0], kernel_size[1]
+    new_weights = new_conv.weight.data.cpu().numpy()
+
+    # skip that filter's weight inside old_weights and store others into new_weights
+    new_weights = np.delete(old_weights, filters_to_prune, axis = 0)
+    new_conv.weight.data = torch.from_numpy(new_weights).cuda()
+
+    bias_numpy = lconv.bias.data.cpu().numpy()
+
+    # change size to (out_channels - cut)
+    bias = np.zeros(shape = (bias_numpy.shape[0] - cut), dtype = np.float32)
+    bias = np.delete(bias_numpy, filters_to_prune, axis = None)
+    new_conv.bias.data = torch.from_numpy(bias).cuda()
+
+    # new BN layer after new_conv
+    new_bn = torch.nn.BatchNorm2d(num_features=new_conv.out_channels, eps=lbn.eps, momentum=lbn.momentum, affine=lbn.affine)
+    # old_bn.affine == True, need to copy learnable gamma and beta to new_bn
+    # gamma: size = (num_features)
+    old_weights = lbn.weight.data.cpu().numpy()
+    new_weights = new_bn.weight.data.cpu().numpy()
+    new_weights = np.delete(old_weights, filters_to_prune)
+    new_bn.weight.data = torch.from_numpy(new_weights).cuda()
+
+    # beta: size = (num_features)
+    bias_numpy = lbn.bias.data.cpu().numpy()
+    # change size to (out_channels - cut)
+    bias = np.zeros(shape = (bias_numpy.shape[0] - cut), dtype = np.float32)
+    bias = np.delete(bias_numpy, filters_to_prune)
+    new_bn.bias.data = torch.from_numpy(bias).cuda()
+
+    # next_conv exists, update next_conv or next_conv of a block or next_conv+next_ds of a block
+    if not next_conv is None:
+        next_new_conv = \
+            torch.nn.Conv2d(in_channels = next_conv.in_channels - cut,\
+                out_channels =  next_conv.out_channels, \
+                kernel_size = next_conv.kernel_size, \
+                stride = next_conv.stride,
+                padding = next_conv.padding,
+                dilation = next_conv.dilation,
+                groups = next_conv.groups,
+                bias = next_conv.bias is not None)
+
+        old_weights = next_conv.weight.data.cpu().numpy()
+        new_weights = next_new_conv.weight.data.cpu().numpy()
+
+        new_weights = np.delete(old_weights, filters_to_prune, axis = 1)
+        next_new_conv.weight.data = torch.from_numpy(new_weights).cuda()
+
+        next_new_conv.bias.data = next_conv.bias.data # bias won't change
+        # next_ds exists, so next_conv must locate inside a block
+        if next_ds is not None:
+            old_conv_in_next_ds = next_ds[0]
+            new_conv_in_next_new_ds = \
+                torch.nn.Conv2d(in_channels = old_conv_in_next_ds.in_channels - cut,\
+                    out_channels =  old_conv_in_next_ds.out_channels, \
+                    kernel_size = old_conv_in_next_ds.kernel_size, \
+                    stride = old_conv_in_next_ds.stride,
+                    padding = old_conv_in_next_ds.padding,
+                    dilation = old_conv_in_next_ds.dilation,
+                    groups = old_conv_in_next_ds.groups,
+                    bias = old_conv_in_next_ds.bias is not None)
+
+            old_weights = old_conv_in_next_ds.weight.data.cpu().numpy()
+            new_weights = new_conv_in_next_new_ds.weight.data.cpu().numpy()
+
+            new_weights = np.delete(old_weights, filters_to_prune, axis = 1)
+            new_conv_in_next_new_ds.weight.data = torch.from_numpy(new_weights).cuda()
+            new_conv_in_next_new_ds.bias.data = old_conv_in_next_ds.bias.data # bias won't change
+
+            next_new_ds = nn.Sequential(new_conv_in_next_new_ds, next_ds[1]) # BN keeps unchanged
+
+            # next_new_ds and next_new_conv are ready now, create a next_new_block for replace_layers()
+            if isinstance(next_blk, BasicBlock):
+                # rely on conv1 of old block to get in_planes, out_planes, tride
+                next_new_block = BasicBlock(next_blk.conv1.in_channels - cut, next_blk.conv1.out_channels, next_blk.stride, downsample = next_new_ds)
+                next_new_block.conv1 = next_new_conv # only update in_channels
+                next_new_block.bn1 = next_blk.bn1
+                next_new_block.relu = next_blk.relu
+                next_new_block.conv2 = next_blk.conv2
+                next_new_block.bn2 = next_blk.bn2
+            else:
+                next_new_block = Bottleneck(next_blk.conv1.in_channels - cut, next_blk.conv1.out_channels, next_blk.stride, downsample = next_new_ds)
+                next_new_block.conv1 = next_new_conv # only update in_channels
+                next_new_block.bn1 = next_blk.bn1
+                next_new_block.conv2 = next_blk.conv2
+                next_new_block.bn2 = next_blk.bn2
+                next_new_block.conv3 = next_blk.conv3
+                next_new_block.bn3 = next_blk.bn3
+                next_new_block.relu = next_blk.relu
+
+    # replace
+    if not next_conv is None:
+        # update current left conv + left BN layer, have BN by default
+		new_ds = torch.nn.Sequential(
+			*(replace_layers(blk.downsample, i, [0, 1], \
+				[new_conv, new_bn]) for i, _ in enumerate(blk.downsample)))
+
+        # delete current and replace with a brand new BLOCK
+        if isinstance(blk, BasicBlock):
+            # rely on conv1 of old block to get in_planes, out_planes, tride
+            new_blk = BasicBlock(blk.conv1.in_channels, blk.conv1.out_channels, blk.stride, downsample = new_ds)
+            # keep all layers in residual path unchanged tempararily
+            new_blk.conv1 = blk.conv1
+            new_blk.bn1 = blk.bn1
+            new_blk.relu = blk.relu
+            new_blk.conv2 = blk.conv2
+            new_blk.bn2 = blk.bn2
+        else:
+            new_blk = Bottleneck(blk.conv1.in_channels, blk.conv1.out_channels, blk.stride, downsample = new_ds)
+            # keep all layers in residual path unchanged tempararily
+            new_blk.conv1 = blk.conv1
+            new_blk.bn1 = blk.bn1
+            new_blk.conv2 = blk.conv2
+            new_blk.bn2 = blk.bn2
+            new_blk.conv3 = blk.conv3
+            new_blk.bn3 = blk.bn3
+            new_blk.relu = blk.relu
+
+        # now new_blk is ready, it can act as a layer and replace old blk with replace_layers()
+        # update next_new_conv/next_new_block together
+        if not next_is_block:
+            # next_conv is a normal conv layer
+            base = torch.nn.Sequential(
+                    *(replace_layers(model.base, i, [block_index, block_index+offset], \
+                        [new_blk, next_new_conv]) for i, _ in enumerate(model.base)))
+        else:
+            # next_conv is a block, need to replace it with a new blk with updated conv1, and downsample if necessary
+            base = torch.nn.Sequential(
+                    *(replace_layers(model.base, i, [block_index, block_index+offset], \
+                        [new_blk, next_new_block]) for i, _ in enumerate(model.base)))
+
+        # delete and replace with brand new one
+        del model.base # delete the things pointed by pointer
+        model.base = base
+
+        cut_indices = filters_to_prune
+        message = str(100*float(cut) / num_filters) + "%"
+        print("Filters prunned", str(message))
+
+    else:
+        print("Pruning the last conv layer, error!")
+
+    return cut_indices, model
 
 '''
-    4. Prune identity conv layers with BN in a resnet block
-    Return:
-        cut_indices: the filters_to_prune in this layer, will be used in function 5.
-'''
-def prune_resnet_lconv_layer_with_bn(model, block_index, cut_ratio=0.2):
-    pass
-
-'''
-    5. Prune residual conv layer, the one at the bottom of residual side without BN
+    3. Prune residual conv layer, the one at the bottom of residual side with/without BN
+    (*Note: MUST call this after you prune identity path with downsample, the size won't fit because upper functions only update left path)
     Args:
         block_index: the BasicBlock or Bottleneck Block this layer locates
         filters_to_prune: the filters' indices waiting for being pruned
+        use_bn: use Batch Norm or not
 '''
-def prune_rbconv_by_indices_no_bn(model, block_index, filters_to_prune):
+def prune_rbconv_by_indices(model, block_index, filters_to_prune, use_bn = True):
     pass
 
 '''
-    6. Prune residual conv layer, the one at the bottom of residual side with BN
+    4. Prune normal residual conv layer, the one at the upper of residual side with/without BN
     Args:
         block_index: the BasicBlock or Bottleneck Block this layer locates
         filters_to_prune: the filters' indices waiting for being pruned
+        use_bn: use Batch Norm or not
 '''
-def prune_rbconv_by_indices_with_bn(model, block_index, filters_to_prune):
+def prune_ruconv_layer(model, block_index, filters_to_prune, use_bn = True):
     pass
