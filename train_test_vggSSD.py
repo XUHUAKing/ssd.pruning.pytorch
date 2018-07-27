@@ -28,14 +28,13 @@ import pickle
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
 
-
 parser = argparse.ArgumentParser(
     description='Single Shot MultiBox Detector Training With Pytorch')
 train_set = parser.add_mutually_exclusive_group()
-parser.add_argument('--dataset', default='VOC', choices=['VOC', 'COCO', 'WEISHI'],
-                    type=str, help='VOC or COCO or WEISHI')
-parser.add_argument('--dataset_root', default=VOC_ROOT,
-                    help='Dataset root directory path')
+parser.add_argument('--dataset', default='XL', choices=['VOC', 'COCO', 'WEISHI', 'XL'],
+                    type=str, help='VOC or COCO or WEISHI or XL') #for VOC_xlab_products
+parser.add_argument('--dataset_root', default=XL_ROOT,
+                    help='Dataset root directory path') #VOC_ROOT, for VOC_xlab_products
 parser.add_argument('--basenet', default='vgg16_reducedfc.pth',
                     help='Pretrained base model')
 parser.add_argument('--batch_size', default=32, type=int,
@@ -122,6 +121,15 @@ def train():
                                                          cfg['dataset_mean']))
         val_dataset = VOCDetection(root=voc_val_dataset_root, image_sets=[('2007', 'test')],
                                 transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 300 originally
+    elif args.dataset == 'XL':
+        if args.dataset_root != XL_ROOT:
+            parser.error('Must specify dataset_root if using XL')
+        cfg = xl
+        dataset = XLDetection(root=args.dataset_root,
+                               transform=SSDAugmentation(cfg['min_dim'],
+                                                         cfg['dataset_mean']))
+        val_dataset = XLDetection(root=xl_val_dataset_root, image_sets=['test'],
+                                transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 300 originally
     elif args.dataset == 'WEISHI':
         if args.jpg_xml_path == '':
             parser.error('Must specify jpg_xml_path if using WEISHI')
@@ -166,8 +174,7 @@ def train():
 
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum,
                           weight_decay=args.weight_decay)
-    criterion = MultiBoxLoss(cfg['num_classes'], 0.5, True, 0, True, 3, 0.5,
-                             False, args.cuda)
+    criterion = MultiBoxLoss(cfg['num_classes'], 0.5, True, 0, True, 3, 0.5, False, args.cuda)
 
     net.train()
     # loss counters
@@ -342,7 +349,8 @@ def test_net(save_folder, net, cuda,
         os.mkdir(save_folder)
 
     num_images = len(testset)
-    num_classes = (21, 81)[args.dataset == 'COCO']
+    # num_classes = (21, 81)[args.dataset == 'COCO']
+    num_classes = 25 # for VOC_xlab_products dataset
     # all detections are collected into:
     #    all_boxes[cls][image] = N x 5 array of detections in
     #    (x1, y1, x2, y2, score)

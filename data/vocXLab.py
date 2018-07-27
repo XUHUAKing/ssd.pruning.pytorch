@@ -23,9 +23,9 @@ else:
     import xml.etree.ElementTree as ET
 
 XL_CLASSES = ('none_of_the_above', # always index 0
-'balishui', 'quecaonatie', 'hongniu', 'nongfuNFC',
+'balishui', 'quecaonatie', 'hongniu', 'nongfunfc',
 'jiaduobaoguan', 'quchenshiyuanwei', 'beibingyangjuqi', 'maidongqingningkouwei',
-'xingbakemokawei', 'kalabaoweishengsu', 'sanyuanchunna',
+'xingbakemokawei', 'kalabaoweishengsu', 'sanyuanchunnai',
 'lingdukele', 'kangshifubinghongcha', 'kuerlexiangli', 'yantaifushipingguo',
 'tianranjiaomumianbaonyw', 'laoxiangyangshougongguobawxw', 'tangdarenrishitungulamian',
 'haoliyoutilamisuliumeizhuang', 'junzaijuanmianjinxianglawei170g',
@@ -104,7 +104,7 @@ class XLDetection(data.Dataset):
 
     def __init__(self, root,
                  image_sets=['trainval'], # or 'test'
-                 transform=None, target_transform=VOCAnnotationTransform(),
+                 transform=None, target_transform=XLAnnotationTransform(),
                  dataset_name='VOC_XLab'):
         self.root = root
         self.image_set = image_sets
@@ -128,10 +128,19 @@ class XLDetection(data.Dataset):
         return len(self.ids)
 
     def pull_item(self, index):
-        img_id = self.ids[index]
+        good = False # to skip error data
 
-        target = ET.parse(self._annopath % img_id).getroot()
-        img = cv2.imread(self._imgpath % img_id)
+        while good is not True:
+            img_id = self.ids[index]
+            target = ET.parse(self._annopath % img_id).getroot()
+            img = cv2.imread(self._imgpath % img_id)
+
+            if img is not None: # the image is correct
+                height, width, channels = img.shape
+                if len(np.array(self.target_transform(target, width, height)).shape) == 2:
+                    good = True
+            index += 1
+
         height, width, channels = img.shape
 
         if self.target_transform is not None:
@@ -221,7 +230,7 @@ class XLDetection(data.Dataset):
             cls_ind = cls_ind
             if cls == 'none_of_the_above':
                 continue
-            print('Writing {} VOC results file'.format(cls))
+            print('Writing {} XL results file'.format(cls))
             filename = self._get_voc_results_file_template().format(cls)
             with open(filename, 'wt') as f:
                 for im_ind, index in enumerate(self.ids):
