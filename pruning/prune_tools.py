@@ -408,20 +408,19 @@ def prune_resnet_lconv_layer(model, block_index, cut_ratio=0.2, use_bn = True):
 '''
 def prune_rbconv_by_indices(model, block_index, filters_to_prune, use_bn = True):
     _, blk = list(model.base._modules.items())[block_index]
-    cut_indices = None
 
     if not use_bn:
         print("ResNet without BN is not supported for prunning")
-        return cut_indices, model
+        return model
 
     # check whether the left path has conv layer for prunning
     if blk.downsample == None:
         print("Only support pruning for rbconv after lconv was pruned")
-        return cut_indices, model
+        return model
 
     if not isinstance(blk, (BasicBlock, Bottleneck)):
         print("Only support for ResNet with BasicBlock or Bottleneck defined in torchvision")
-        return cut_indices, model
+        return model
 
     if isinstance(blk, BasicBlock):
         # when it is BasicBlock, the rbconv is conv2, and its bn is bn2
@@ -553,15 +552,14 @@ def prune_rbconv_by_indices(model, block_index, filters_to_prune, use_bn = True)
 '''
 def prune_ruconv1_layer(model, block_index, cut_ratio=0.2, use_bn = True):
     _, blk = list(model.base._modules.items())[block_index]
-    cut_indices = None
 
     if not use_bn:
         print("ResNet without BN is not supported for prunning")
-        return cut_indices, model
+        return model
 
     if not isinstance(blk, (BasicBlock, Bottleneck)):
         print("Conv1 only for ResNet with BasicBlock or Bottleneck defined in torchvision")
-        return cut_indices, model
+        return model
     # cut conv1, and next conv is conv2
     conv = blk.conv1
     bn = blk.bn1
@@ -694,15 +692,14 @@ def prune_ruconv1_layer(model, block_index, cut_ratio=0.2, use_bn = True):
 '''
 def prune_ruconv2_layer(model, block_index, cut_ratio=0.2, use_bn = True):
     _, blk = list(model.base._modules.items())[block_index]
-    cut_indices = None
 
     if not use_bn:
         print("ResNet without BN is not supported for prunning")
-        return cut_indices, model
+        return model
 
     if not isinstance(blk, Bottleneck):
         print("Conv2 only for ResNet with Bottleneck defined in torchvision")
-        return cut_indices, model
+        return model
     # cut conv1, and next conv is conv2
     conv = blk.conv2
     bn = blk.bn2

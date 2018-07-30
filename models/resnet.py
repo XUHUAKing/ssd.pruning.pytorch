@@ -56,6 +56,9 @@ class BasicBlock(nn.Module):
 
         return out
 
+    def out_channels(self):
+        return self.conv2.out_channels
+
 
 class Bottleneck(nn.Module):
     expansion = 4
