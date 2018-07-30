@@ -31,10 +31,10 @@ def str2bool(v):
 parser = argparse.ArgumentParser(
     description='Single Shot MultiBox Detector Training With Pytorch')
 train_set = parser.add_mutually_exclusive_group()
-parser.add_argument('--dataset', default='XL', choices=['VOC', 'COCO', 'WEISHI', 'XL'],
-                    type=str, help='VOC or COCO or WEISHI or XL') #for VOC_xlab_products
-parser.add_argument('--dataset_root', default=XL_ROOT,
-                    help='Dataset root directory path') #VOC_ROOT, for VOC_xlab_products
+parser.add_argument('--dataset', default='VOC', choices=['VOC', 'COCO', 'WEISHI', 'XL'],
+                    type=str, help='VOC or COCO or WEISHI or XL') #'XL', for VOC_xlab_products
+parser.add_argument('--dataset_root', default=VOC_ROOT,
+                    help='Dataset root directory path') #XL_ROOT, for VOC_xlab_products
 parser.add_argument('--basenet', default='vgg16_reducedfc.pth',
                     help='Pretrained base model')
 parser.add_argument('--batch_size', default=32, type=int,
@@ -227,8 +227,8 @@ def train():
             if args.evaluate == True:
                 # load net
                 net.eval()
-                top_k = (300, 200)[args.dataset == 'COCO']
-                if args.dataset == 'VOC':
+                top_k = (300, 200)[args.dataset == 'COCO'] # for VOC_xlab_products
+                if args.dataset == 'VOC' or args.dataset == 'XL': # for VOC_xlab_products
                     APs,mAP = test_net(args.eval_folder, net, args.cuda, val_dataset,
                              BaseTransform(net.module.size, cfg['testset_mean']),
                              top_k, thresh=args.confidence_threshold) # 300 is for cfg['min_dim'] originally
@@ -349,8 +349,8 @@ def test_net(save_folder, net, cuda,
         os.mkdir(save_folder)
 
     num_images = len(testset)
-    # num_classes = (21, 81)[args.dataset == 'COCO']
-    num_classes = 25 # for VOC_xlab_products dataset
+    num_classes = (21, 81)[args.dataset == 'COCO']
+    # num_classes = 25 # for VOC_xlab_products dataset
     # all detections are collected into:
     #    all_boxes[cls][image] = N x 5 array of detections in
     #    (x1, y1, x2, y2, score)
@@ -403,7 +403,7 @@ def test_net(save_folder, net, cuda,
         pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
 
     print('Evaluating detections')
-    if args.dataset == 'VOC':
+    if args.dataset == 'VOC' or args.dataset == 'XL': # for VOC_xlab_products
         APs,mAP = testset.evaluate_detections(all_boxes, save_folder)
         return APs,mAP
     else:
