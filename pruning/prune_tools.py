@@ -406,6 +406,7 @@ def prune_resnet_lconv_layer(model, block_index, cut_ratio=0.2, use_bn = True):
         use_bn: use Batch Norm or not
 '''
 def prune_rbconv_by_indices(model, block_index, filters_to_prune, use_bn = True):
+    _, blk = list(model.base._modules.items())[block_index]
     pass
 
 '''

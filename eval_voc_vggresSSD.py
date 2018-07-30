@@ -77,7 +77,7 @@ else:
     torch.set_default_tensor_type('torch.FloatTensor')
 
 set_type = 'test'
-cfg = voc
+cfg = xl #voc # for VOC_xlab_products dataset
 
 # test function for vggSSD
 """
