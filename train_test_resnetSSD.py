@@ -33,7 +33,7 @@ parser = argparse.ArgumentParser(
 train_set = parser.add_mutually_exclusive_group()
 parser.add_argument('--dataset', default='VOC', choices=['VOC', 'COCO', 'WEISHI', 'XL'],
                     type=str, help='VOC or COCO or WEISHI or XL') #'XL', for VOC_xlab_products
-parser.add_argument('--dataset_root', default=VOC_ROOT, #XL_ROOT
+parser.add_argument('--dataset_root', default=VOC_ROOT, #XL_ROOT, for VOC_xlab_products
                     help='Dataset root directory path')
 parser.add_argument('--basenet', default='resnet50-19c8e357.pth',
                     help='Pretrained base model')
@@ -229,8 +229,8 @@ def train():
             if args.evaluate == True:
                 # load net
                 net.eval()
-                top_k = (300, 200)[args.dataset == 'COCO']
-                if args.dataset == 'VOC':
+                top_k = (300, 200)[args.dataset == 'COCO'] #for VOC_xlab_products
+                if args.dataset == 'VOC' or args.dataset == 'XL': #for VOC_xlab_products
                     APs,mAP = test_net(args.eval_folder, net, args.cuda, val_dataset,
                              BaseTransform(net.module.size, cfg['testset_mean']),
                              top_k, thresh=args.confidence_threshold)
@@ -405,7 +405,7 @@ def test_net(save_folder, net, cuda,
         pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
 
     print('Evaluating detections')
-    if args.dataset == 'VOC':
+    if args.dataset == 'VOC' or args.dataset == 'XL': #for VOC_xlab_products
         APs,mAP = testset.evaluate_detections(all_boxes, save_folder)
         return APs,mAP
     else:
