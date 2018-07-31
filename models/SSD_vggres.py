@@ -3,8 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from layers import *
-from data import voc, coco #from config.py
-from .base_models import vgg, vgg_base, resnet
+from data import voc, coco, xl #from config.py
+from .backbones import vgg, vgg_base, resnet
 import os
 
 # inherit nn.Module so it have .train()
@@ -30,7 +30,10 @@ class SSD_VGG(nn.Module):
         super(SSD_VGG, self).__init__()
         self.phase = phase
         self.num_classes = num_classes
-        self.cfg = (coco, voc)[num_classes == 21]#when num_classes==21, i.e. true/[1], then voc is chosen
+        if num_classes == 25: # for VOC_xlab_products dataset
+            self.cfg = xl
+        else:
+            self.cfg = (coco, voc)[num_classes == 21]#when num_classes==21, i.e. true/[1], then voc is chosen
         self.priorbox = PriorBox(self.cfg)
         # just create an object above, but need to call forward() to return prior boxes coords
         self.priors = Variable(self.priorbox.forward(), volatile=True)
@@ -137,7 +140,10 @@ class SSD_RESNET(nn.Module):
         super(SSD_RESNET, self).__init__()
         self.phase = phase
         self.num_classes = num_classes
-        self.cfg = (coco, voc)[num_classes == 21]#when num_classes==21, i.e. true/[1], then voc is chosen
+        if num_classes == 25: # for VOC_xlab_products dataset
+            self.cfg = xl
+        else:
+            self.cfg = (coco, voc)[num_classes == 21]#when num_classes==21, i.e. true/[1], then voc is chosen
         self.priorbox = PriorBox(self.cfg)
         # just create an object above, but need to call forward() to return prior boxes coords
         self.priors = Variable(self.priorbox.forward(), volatile=True)
@@ -163,7 +169,7 @@ class SSD_RESNET(nn.Module):
         loc = list()
         conf = list()
 
-        # apply resnet up to the last bottlneck module in stage 2
+        # apply resnet up to the last bottlneck module in stage 2, index = 10
         for k in range(11):
             x = self.base[k](x)# use resnet[k] as a function because it is a module
 

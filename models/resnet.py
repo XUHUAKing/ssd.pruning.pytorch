@@ -112,9 +112,9 @@ class ResNet(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64, layers[0])# stride = 1 so won't change size
-        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)# stride = 2 so will half size
-        self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
-        self.layer4 = self._make_layer(block, 512, layers[3], stride=1)# change to 1 for detection task
+        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)# 3th halfing stride = 2 so will half size
+        self.layer3 = self._make_layer(block, 256, layers[2], stride=2) # 4th halfing
+        self.layer4 = self._make_layer(block, 512, layers[3], stride=1)# 5th halfing change from 2 to 1 for detection task
         #self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AvgPool2d(7, padding = 3, count_include_pad = False, stride=1) #avoid halfing the size in avg pool for detection task
         self.fc = nn.Linear(512 * block.expansion, num_classes)
@@ -173,7 +173,7 @@ class ResNet(nn.Module):
         layers += [self.conv1, self.bn1, self.relu, self.maxpool]
         #every layer_i is a module named block
         layers += self.layer1.children() # return a list containing all blocks inside nn.Sequential - 3
-        layers += self.layer2.children() # 4
+        layers += self.layer2.children() # 4 index = 10
         layers += self.layer3.children() # 6
         layers += self.layer4.children() # 3
         layers += [self.avgpool, self.fc]

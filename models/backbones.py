@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 from .resnet import *
+from .mobilenetv1 import *
+from .mobilenetv2 import *
 
 
 # This function is derived from torchvision VGG make_layers()
@@ -42,3 +44,13 @@ vgg_base = {
 def resnet():
     model = resnet50(pretrained=True)
     return model.resnet_layers()
+
+# return a list of model features for mobileNet v1
+def mobilenetv1():
+    model = MobileNetV1()
+    return model.mobilev1_layers()
+
+# return a list of model features for mobileNet v2
+def mobilenetv2(width_mult = 1.):
+    model = MobileNetV2(width_mult) # n_class and input_size is not used in backbone
+    return model.mobilev2_layers()
