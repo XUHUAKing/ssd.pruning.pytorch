@@ -11,8 +11,8 @@ import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.autograd import Variable
-from data import VOC_CLASSES as labelmap
-# from data import XL_CLASSES as labelmap # for VOC_xlab_products dataset
+# from data import VOC_CLASSES as labelmap
+from data import XL_CLASSES as labelmap # for VOC_xlab_products dataset
 
 import sys
 import os
@@ -56,10 +56,10 @@ parser.add_argument('--top_k', default=300, type=int,
                     help='Further restrict the number of predictions to parse')
 parser.add_argument('--cuda', default=True, type=str2bool,
                     help='Use cuda to train model')
-parser.add_argument('--voc_root', default=VOC_ROOT,
-                    help='Location of VOC root directory')
-#parser.add_argument('--voc_root', default=XL_ROOT,
-#                    help='Location of VOC root directory')
+#parser.add_argument('--voc_root', default=VOC_ROOT,
+#                   help='Location of VOC root directory')
+parser.add_argument('--voc_root', default=XL_ROOT,
+                    help='Location of XL root directory') # for VOC_xlab_products dataset
 parser.add_argument('--cleanup', default=True, type=str2bool,
                     help='Cleanup and remove results files following eval')
 
@@ -79,7 +79,7 @@ else:
     torch.set_default_tensor_type('torch.FloatTensor')
 
 set_type = 'test'
-cfg = voc320 #xl320
+cfg = xl320 # for VOC_xlab_products dataset ,voc320
 
 priorbox = PriorBox(cfg)
 priors = Variable(priorbox.forward(), volatile=True)
@@ -204,12 +204,12 @@ if __name__ == '__main__':
     net.eval()
     print('Finished loading model!')
     # load data
-    dataset = VOCDetection(args.voc_root, [('2007', set_type)],
-                           BaseTransform(320, cfg['dataset_mean']),
-                           VOCAnnotationTransform())
-#    dataset = XLDetection(args.voc_root, [set_type], # for VOC_xlab_products dataset
+#    dataset = VOCDetection(args.voc_root, [('2007', set_type)],
 #                           BaseTransform(320, cfg['dataset_mean']),
-#                           XLAnnotationTransform())
+#                           VOCAnnotationTransform())
+    dataset = XLDetection(args.voc_root, [set_type], # for VOC_xlab_products dataset
+                           BaseTransform(320, cfg['dataset_mean']),
+                           XLAnnotationTransform())
     if args.cuda:
         net = net.cuda()
         cudnn.benchmark = True

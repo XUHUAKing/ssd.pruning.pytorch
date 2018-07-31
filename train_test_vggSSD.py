@@ -31,9 +31,9 @@ def str2bool(v):
 parser = argparse.ArgumentParser(
     description='Single Shot MultiBox Detector Training With Pytorch')
 train_set = parser.add_mutually_exclusive_group()
-parser.add_argument('--dataset', default='VOC', choices=['VOC', 'COCO', 'WEISHI', 'XL'],
+parser.add_argument('--dataset', default='XL', choices=['VOC', 'COCO', 'WEISHI', 'XL'],
                     type=str, help='VOC or COCO or WEISHI or XL') #'XL', for VOC_xlab_products
-parser.add_argument('--dataset_root', default=VOC_ROOT,
+parser.add_argument('--dataset_root', default=XL_ROOT,
                     help='Dataset root directory path') #XL_ROOT, for VOC_xlab_products
 parser.add_argument('--basenet', default='vgg16_reducedfc.pth',
                     help='Pretrained base model')
@@ -349,8 +349,8 @@ def test_net(save_folder, net, cuda,
         os.mkdir(save_folder)
 
     num_images = len(testset)
-    num_classes = (21, 81)[args.dataset == 'COCO']
-    # num_classes = 25 # for VOC_xlab_products dataset
+#    num_classes = (21, 81)[args.dataset == 'COCO']
+    num_classes = 25 # for VOC_xlab_products dataset
     # all detections are collected into:
     #    all_boxes[cls][image] = N x 5 array of detections in
     #    (x1, y1, x2, y2, score)
