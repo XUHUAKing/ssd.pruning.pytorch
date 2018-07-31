@@ -1,5 +1,5 @@
 '''
-	This file is implementation for mobileNet v1
+    This file is implementation for mobileNet v1
 '''
 
 import torch
@@ -60,6 +60,6 @@ class MobileNetV1(nn.Module):
         x = self.classifier(x)
         return x
 
-	def mobilev1_layers(self):
-		# return a list containing conv_bn or conv_dw object one by one
-		return self.features.children()
+    def mobilev1_layers(self):
+        # return a list containing conv_bn or conv_dw object one by one
+        return self.features.children()
