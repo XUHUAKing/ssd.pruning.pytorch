@@ -42,7 +42,8 @@ vgg_base = {
 # https://github.com/pytorch/vision/blob/master/torchvision/models/vgg.py
 # cfg is a list of string
 def resnet():
-    model = resnet50(pretrained=True)
+    model = resnet50()
+    model.load_state_dict(torch.load('weights/resnet50-19c8e357.pth')) # load pretrained model for detection
     return model.resnet_layers()
 
 # return a list of model features for mobileNet v1

@@ -164,7 +164,7 @@ class ResNet(nn.Module):
 
         return x
 
-    # for backbone in SSD, exclude fc
+    # for backbone in SSD, exclude fc, will keep weights if it exists
     def resnet_layers(self):
         """
         Return:
@@ -216,8 +216,7 @@ def resnet50(pretrained=False, **kwargs):
         # load_url will load the state_dict type
         # last level
         # load will start from HOME directory instead of current directory
-        model.load_state_dict(torch.load('weights/resnet50-19c8e357.pth'))#(model_zoo.load_url(model_urls['resnet50']))
-        #model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
+        model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
     return model
 
 
