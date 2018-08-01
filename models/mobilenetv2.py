@@ -27,6 +27,7 @@ class InvertedResidual(nn.Module):
         super(InvertedResidual, self).__init__()
         self.stride = stride
         self.use_res_connect = self.stride == 1 and inp == oup  # using residual connect when input_channel = output_channel
+        self.oup = oup # for SSD multibox
 
         self.conv = nn.Sequential(
                 # pw
@@ -82,7 +83,7 @@ class MobileNetV2(nn.Module):
 
         # building last several layers
         self.features.append(conv_1x1_bn(input_channel, self.last_channel)) # after this layer, connect to extra layers in SSD
-        self.features.append(nn.AvgPool2d(int(input_size/32))) # won't be used in backbone
+        self.features.append(nn.AvgPool2d(int(input_size/32))) # used in backbone as well
         # make it nn.Sequential
         self.features = nn.Sequential(*self.features)
 

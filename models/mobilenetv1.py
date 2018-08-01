@@ -22,7 +22,7 @@ def conv_dw(inp, oup, stride):
         nn.ReLU(inplace=True),
 
         # 1x1 pointwise convolution
-        nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
+        nn.Conv2d(inp, oup, 1, 1, 0, bias=False), # index = 3
         nn.BatchNorm2d(oup),
         nn.ReLU(inplace=True),
     )

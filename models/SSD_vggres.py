@@ -177,8 +177,8 @@ class SSD_RESNET(nn.Module):
         sources.append(s)
 
         # apply resnet up to the last module avg pool, right before the fc1000
-        # minus 1 to exclude fc1000 layer
-        for k in range(11, len(self.base)-1):
+        # fc1000 layer has been excluded
+        for k in range(11, len(self.base)):
             x = self.base[k](x)
         sources.append(x)
 
@@ -260,7 +260,7 @@ def vgg_multibox(vgg, extra_layers, cfg, num_classes):
 def resnet_multibox(resnet, extra_layers, cfg, num_classes):
     loc_layers = []
     conf_layers = []
-    resnet_source = [10, -3]#pending
+    resnet_source = [10, -2]#pending
     for k, v in enumerate(resnet_source):
         # Conv2d (in_channels, out_channels, kernel_size, stride, padding)
         loc_layers += [nn.Conv2d(resnet[v].out_channels(),

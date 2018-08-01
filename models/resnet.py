@@ -164,6 +164,7 @@ class ResNet(nn.Module):
 
         return x
 
+    # for backbone in SSD, exclude fc
     def resnet_layers(self):
         """
         Return:
@@ -176,7 +177,7 @@ class ResNet(nn.Module):
         layers += self.layer2.children() # 4 index = 10
         layers += self.layer3.children() # 6
         layers += self.layer4.children() # 3
-        layers += [self.avgpool, self.fc]
+        layers += [self.avgpool] # exclude self.fc
         return layers # a list of modules because a layer or a block is also a module
 
 
