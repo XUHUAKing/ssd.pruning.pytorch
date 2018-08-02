@@ -41,7 +41,7 @@ class SSD_MobN1(nn.Module):
         # SSD network
         self.base = nn.ModuleList(base)
         # Layer learns to scale the l2 normalized features from conv4_3
-        self.L2Norm = L2Norm(512, 20)
+        self.L2Norm = L2Norm(256, 20) # L2Norm(512, 20), 256 for mobilenetv1
         self.extras = nn.ModuleList(extras)
 
         self.loc = nn.ModuleList(head[0])#loc conv layer
@@ -238,14 +238,14 @@ def mob1_multibox(mob1, extra_layers, cfg, num_classes):
     mob1_source = [5, -2] #two con_dw
     for k, v in enumerate(mob1_source):
         # conv2d (in_channels, out_channels, kernel_size, stride, padding)
-        loc_layers += [nn.conv2d(mob1[v][3].out_channels, #[3] is the last conv within conv_dw
+        loc_layers += [nn.Conv2d(mob1[v][3].out_channels, #[3] is the last conv within conv_dw
                                  cfg[k] * 4, kernel_size=3, padding=1)]
-        conf_layers += [nn.conv2d(mob1[v][3].out_channels,
+        conf_layers += [nn.Conv2d(mob1[v][3].out_channels,
                         cfg[k] * num_classes, kernel_size=3, padding=1)]
     for k, v in enumerate(extra_layers[1::2], 2):# start k from 2
-        loc_layers += [nn.conv2d(v.out_channels, cfg[k]
+        loc_layers += [nn.Conv2d(v.out_channels, cfg[k]
                                  * 4, kernel_size=3, padding=1)]
-        conf_layers += [nn.conv2d(v.out_channels, cfg[k]
+        conf_layers += [nn.Conv2d(v.out_channels, cfg[k]
                                   * num_classes, kernel_size=3, padding=1)]
     return mob1, extra_layers, (loc_layers, conf_layers)
 
@@ -259,14 +259,14 @@ def mob2_multibox(mob2, extra_layers, cfg, num_classes):
         else:
             out_channels = mob2[v][0].out_channels # conv_1x1_bn
         # conv2d (in_channels, out_channels, kernel_size, stride, padding)
-        loc_layers += [nn.conv2d(out_channels,
+        loc_layers += [nn.Conv2d(out_channels,
                                  cfg[k] * 4, kernel_size=3, padding=1)]
-        conf_layers += [nn.conv2d(out_channels,
+        conf_layers += [nn.Conv2d(out_channels,
                         cfg[k] * num_classes, kernel_size=3, padding=1)]
     for k, v in enumerate(extra_layers[1::2], 2):# start k from 2
-        loc_layers += [nn.conv2d(v.out_channels, cfg[k]
+        loc_layers += [nn.Conv2d(v.out_channels, cfg[k]
                                  * 4, kernel_size=3, padding=1)]
-        conf_layers += [nn.conv2d(v.out_channels, cfg[k]
+        conf_layers += [nn.Conv2d(v.out_channels, cfg[k]
                                   * num_classes, kernel_size=3, padding=1)]
     return mob2, extra_layers, (loc_layers, conf_layers)
 

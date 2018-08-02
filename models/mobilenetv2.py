@@ -101,4 +101,6 @@ class MobileNetV2(nn.Module):
 
     def mobilev2_layers(self):
         # return a list containing conv_bn or InvertedResidual object one by one
-        return self.features.children()
+        layers = []
+        layers += self.features.children()
+        return layers
