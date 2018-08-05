@@ -145,7 +145,8 @@ def train():
         import visdom
         viz = visdom.Visdom()
 
-    ssd_net = build_mssd('train', cfg['min_dim'], cfg['num_classes'], base='m1') # backbone network is m1
+#    ssd_net = build_mssd('train', cfg['min_dim'], cfg['num_classes'], base='m1') # backbone network is m1
+    ssd_net = build_mssd('train', cfg['min_dim'], cfg['num_classes'], base='m2') # backbone network is m2
     net = ssd_net
 
     if args.cuda:
@@ -273,7 +274,9 @@ def train():
 
         if iteration != 0 and iteration % 5000 == 0:
             print('Saving state, iter:', iteration)
-            torch.save(ssd_net.state_dict(), 'weights/ssd300_mobilev1_' +
+#            torch.save(ssd_net.state_dict(), 'weights/ssd300_mobilev1_' +
+#                       repr(iteration) + '.pth')
+            torch.save(ssd_net.state_dict(), 'weights/ssd300_mobilev2_' +
                        repr(iteration) + '.pth')
     torch.save(ssd_net.state_dict(),
                args.save_folder + '' + args.dataset + '.pth')
