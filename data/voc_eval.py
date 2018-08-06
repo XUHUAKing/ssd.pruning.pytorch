@@ -90,7 +90,7 @@ def voc_eval(detpath,
 # first load gt
     if not os.path.isdir(cachedir):
         os.mkdir(cachedir)
-    cachefile = os.path.join(cachedir, 'annots.pkl')
+    cachefile = os.path.join(cachedir, 'annots.pkl') # if dataset changed, you need to delete old annots.pkl first
     # read list of images
     with open(imagesetfile, 'r') as f:
         lines = f.readlines()
