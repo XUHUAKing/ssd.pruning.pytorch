@@ -5,6 +5,7 @@ from torch.autograd import Variable
 from layers import *
 from data import voc, coco, xl #from config.py
 from .backbones import mobilenetv1, mobilenetv2
+from .mobilenetv2 import InvertedResidual
 import os
 
 # inherit nn.Module so it have .train()
@@ -81,8 +82,8 @@ class SSD_MobN1(nn.Module):
         s = self.L2Norm(x)#just a kind of normalization
         sources.append(s)
 
-        # apply mobilenet v1 right after avg pool (the last layer in self.features)
-        for k in range(6, len(self.base)): # 14
+        # apply mobilenet v1 right before avg pool (the last layer in self.features)
+        for k in range(6, len(self.base) - 1): # 14
             x = self.base[k](x)
         sources.append(x)
 
@@ -148,7 +149,7 @@ class SSD_MobN2(nn.Module):
         # SSD network
         self.base = nn.ModuleList(base)
         # Layer learns to scale the l2 normalized features from conv4_3
-        self.L2Norm = L2Norm(512, 20)
+        self.L2Norm = L2Norm(32, 20) # 512
         self.extras = nn.ModuleList(extras)
 
         self.loc = nn.ModuleList(head[0])#loc conv layer
@@ -173,7 +174,7 @@ class SSD_MobN2(nn.Module):
         sources.append(s)
 
         # apply mobilenet v1 right after avg pool (the last layer in self.features)
-        for k in range(7, len(self.base)): # 19
+        for k in range(7, len(self.base) - 1): # 19
             x = self.base[k](x)
         sources.append(x)
 

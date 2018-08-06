@@ -54,6 +54,6 @@ def mobilenetv1():
 
 # return a list of model features for mobileNet v2
 def mobilenetv2(width_mult = 1.):
-    model = MobileNetV2(width_mult) # n_class and input_size is not used in backbone
+    model = MobileNetV2(width_mult = width_mult) # n_class and input_size is not used in backbone
     model.load_state_dict(torch.load('weights/mobilev2_withfc.pth')) # load pretrained model for detection, only pretrained for width_multi = 1
     return model.mobilev2_layers() # exclude fc but keep weights
