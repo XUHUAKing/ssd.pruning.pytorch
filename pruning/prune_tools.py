@@ -206,7 +206,7 @@ def prune_resnet_lconv_layer(model, block_index, cut_ratio=0.2, use_bn = True):
         elif isinstance(res[1], (BasicBlock, Bottleneck)):
             next_is_block = True
             next_blk = res[1]
-            if res[1].downsample == None
+            if res[1].downsample is None:
                 next_conv = res[1].conv1
                 next_ds = None
             else:
@@ -347,9 +347,9 @@ def prune_resnet_lconv_layer(model, block_index, cut_ratio=0.2, use_bn = True):
     # replace
     if not next_conv is None:
         # update current left conv + left BN layer, have BN by default
-		new_ds = torch.nn.Sequential(
-			*(replace_layers(blk.downsample, i, [0, 1], \
-				[new_conv, new_bn]) for i, _ in enumerate(blk.downsample)))
+        new_ds = torch.nn.Sequential(
+            *(replace_layers(blk.downsample, i, [0, 1], \
+                [new_conv, new_bn]) for i, _ in enumerate(blk.downsample)))
 
         # delete current and replace with a brand new BLOCK
         if isinstance(blk, BasicBlock):

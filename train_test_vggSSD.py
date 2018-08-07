@@ -1,7 +1,11 @@
 '''
     Train + Test SSD model with vgg backbone
-    Execute: python3 train_test_vggSSD.py --evaluate True (testing while training)
-    Execute: python3 train_test_vggSSD.py (only training)
+    Execute: python3 train_test_vggresSSD.py --evaluate True (testing while training)
+    Execute: python3 train_test_vggresSSD.py (only training)
+
+    Train + Test SSD model with resnet backbone
+    Execute: python3 train_test_vggresSSD.py --use_res --evaluate True (testing while training)
+    Execute: python3 train_test_vggresSSD.py --use_res (only training)
     Author: xuhuahuang as intern in YouTu 07/2018
     Status: checked
 '''
@@ -37,6 +41,8 @@ parser.add_argument('--dataset_root', default=XL_ROOT,
                     help='Dataset root directory path') #XL_ROOT, for VOC_xlab_products
 parser.add_argument('--basenet', default='vgg16_reducedfc.pth',
                     help='Pretrained base model')
+# parser.add_argument('--basenet', default='resnet50-19c8e357.pth', # for resnet
+#                   help='Pretrained base model')
 parser.add_argument('--batch_size', default=32, type=int,
                     help='Batch size for training')
 parser.add_argument('--resume', default=None, type=str,
@@ -78,6 +84,10 @@ parser.add_argument('--jpg_xml_path', default='',
                     help='Image XML mapping path')
 parser.add_argument('--label_name_path', default='',
                     help='Label Name file path')
+# for vgg or resnet backbone
+parser.add_argument("--use_res", dest="use_res", action="store_true")
+parser.set_defaults(use_res=False)
+
 args = parser.parse_args()
 
 
@@ -107,6 +117,7 @@ def train():
                   "--dataset_root was not specified.")
             args.dataset_root = COCO_ROOT
         cfg = coco
+        # TODO: evaluation on COCO dataset
         dataset = COCODetection(root=args.dataset_root,
                                 transform=SSDAugmentation(cfg['min_dim'],
                                                           cfg['dataset_mean']))
@@ -136,6 +147,7 @@ def train():
         if args.label_name_path == '':
             parser.error('Must specify label_name_path if using WEISHI')
         cfg = weishi
+        # TODO: training and evaluation on WEISHI dataset
         dataset = WeishiDetection(image_xml_path=args.jpg_xml_path, label_file_path=args.label_name_path,
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          cfg['dataset_mean']))
@@ -147,7 +159,10 @@ def train():
         viz = visdom.Visdom()
 
     # network set-up
-    ssd_net = build_ssd('train', cfg['min_dim'], cfg['num_classes'], base='vgg') # backbone network is vgg
+    if args.use_res:
+        ssd_net = build_ssd('train', cfg['min_dim'], cfg['num_classes'], base='resnet') # for resnet
+    else:
+        ssd_net = build_ssd('train', cfg['min_dim'], cfg['num_classes'], base='vgg') # backbone network is vgg
     net = ssd_net
 
     if args.cuda:
@@ -157,6 +172,8 @@ def train():
     if args.resume:
         print('Resuming training, loading {}...'.format(args.resume))
         ssd_net.load_weights(args.resume)
+    elif args.use_res: # for resnet
+        print('Loading base network...') # Preloaded.
     else:
         vgg_weights = torch.load(args.save_folder + args.basenet)
         print('Loading base network...')
@@ -276,8 +293,12 @@ def train():
 
         if iteration != 0 and iteration % 5000 == 0:
             print('Saving state, iter:', iteration)
-            torch.save(ssd_net.state_dict(), 'weights/ssd300_vgg_' +
-                       repr(iteration) + '.pth')
+            if args.use_res:
+                torch.save(ssd_net.state_dict(), 'weights/ssd300_resnet_' + # for resnet
+                           repr(iteration) + '.pth')
+            else:
+                torch.save(ssd_net.state_dict(), 'weights/ssd300_vgg_' +
+                           repr(iteration) + '.pth')
     torch.save(ssd_net.state_dict(),
                args.save_folder + '' + args.dataset + '.pth')
 

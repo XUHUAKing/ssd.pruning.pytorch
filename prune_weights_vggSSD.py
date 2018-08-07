@@ -143,7 +143,7 @@ class Prunner_vggSSD:
                 model = self.model.cpu()
                 model = prune_conv_layer(model, layer, cut_ratio=cut_ratio, use_bn = False)
                 self.model = model.cuda()
-                self.test()
+                # self.test()
 
         print("Finished. Get the accuracy after pruning..")
         self.test()

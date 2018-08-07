@@ -142,7 +142,7 @@ class Prunner_resnetSSD:
                 model = self.model.cpu()
                 model = prune_conv_layer(model, layer, cut_ratio=cut_ratio, use_bn = True)
                 self.model = model.cuda()
-                self.test()
+                # self.test()
 
             if isinstance(module, BasicBlock) and (layer not in fork_indices):
                 print("Pruning conv layer ", layer, " in BasicBlock..")
@@ -159,7 +159,7 @@ class Prunner_resnetSSD:
                 model = prune_ruconv1_layer(model, layer, cut_ratio=cut_ratio, use_bn = True)
 
                 self.model = model.cuda()
-                self.test()
+                # self.test()
 
             if isinstance(module, Bottleneck) and (layer not in fork_indices):
                 print("Pruning conv layer ", layer, " in Bottleneck..")
@@ -178,7 +178,7 @@ class Prunner_resnetSSD:
                 model = prune_ruconv2_layer(model, layer, cut_ratio=cut_ratio, use_bn = True)
 
                 self.model = model.cuda()
-                self.test()
+                # self.test()
 
         print("Finished. Get the accuracy after pruning..")
         self.test()
