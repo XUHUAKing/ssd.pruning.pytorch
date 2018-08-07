@@ -1,6 +1,6 @@
 '''
     Finetune prunned model refineDet(vgg) (Train/Test on VOC)
-    Execute: python3 finetune_refineDet.py --pruned_model prunes/_your_prunned_model_.pth
+    Execute: python3 finetune_refineDet.py --pruned_model prunes/_your_prunned_model_.pth --lr x --epoch y
     Author: xuhuahuang as intern in YouTu 07/2018
 '''
 import torch
@@ -41,9 +41,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--prune_folder", default = "prunes/")
 parser.add_argument("--pruned_model", default = "prunes/refineDet_prunned.pth")
 parser.add_argument('--dataset_root', default=VOC_ROOT)
-parser.add_argument("--cut_ratio", default=0.2, type=int)
-parser.add_argument("--lr", default=0.001, type=int)
-parser.add_argument("--momentum", default=0.9, type=int)
+parser.add_argument("--cut_ratio", default=0.2, type=float)
+parser.add_argument("--lr", default=0.001, type=float)
+parser.add_argument("--momentum", default=0.9, type=float)
 parser.add_argument("--epoch", default=20, type=int)
 parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to train model')
 args = parser.parse_args()
@@ -137,6 +137,8 @@ def test_net(save_folder, net, detector, priors, cuda,
     print('Evaluating detections')
     APs,mAP = testset.evaluate_detections(all_boxes, save_folder)
 
+    return mAP # for model storing
+
 # --------------------------------------------------------------------------- Finetune Part
 class FineTuner_refineDet:
     def __init__(self, train_loader, testset, arm_criterion, odm_criterion, model):
@@ -151,11 +153,12 @@ class FineTuner_refineDet:
     def test(self):
         self.model.eval()
         # evaluation
-        test_net('prunes/test', self.model, detector, priors, args.cuda, testset,
+        map = test_net('prunes/test', self.model, detector, priors, args.cuda, testset,
                  BaseTransform(self.model.size, cfg['dataset_mean']),
                  300, thresh=0.01)
 
         self.model.train()
+        return map
 
     # epoches: fine tuning for this epoches
     def train(self, optimizer = None, epoches = 5):
@@ -167,8 +170,9 @@ class FineTuner_refineDet:
         for i in range(epoches):
             print("FineTune... Epoch: ", i+1)
             self.train_epoch(optimizer) # no need for rank filters
-            self.test()
-        print("Finished fine tuning.")
+            map = self.test()
+        print("Finished fine tuning. mAP is ", map)
+        return map
 
     # batch: images, label: targets
     def train_batch(self, optimizer, batch, label):
@@ -203,6 +207,7 @@ if __name__ == '__main__':
     if not os.path.exists(args.prune_folder):
         os.mkdir(args.prune_folder)
 
+    print(args)
     # load model from previous pruning
     model = torch.load(args.pruned_model).cuda()
     print('Finished loading model!')
@@ -222,9 +227,9 @@ if __name__ == '__main__':
     fine_tuner = FineTuner_refineDet(data_loader, testset, arm_criterion, odm_criterion, model)
 
     # ------------------------ adjustable part
-    optimizer = optim.SGD(self.model.parameters(), lr=args.lr, momentum=args.momentum)
-    fine_tuner.train(optimizer = optimizer, epoches = args.epoch)
+    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+    map = fine_tuner.train(optimizer = optimizer, epoches = args.epoch)
     # ------------------------ adjustable part
 
-    print('Saving finetuned model...')
-    torch.save(model, 'prunes/refineDet_finetuned') # same as fine_tuner.model
+    print('Saving finetuned model with map ', map, '...')
+    torch.save(model, 'prunes/refineDet_finetuned_{}'.format(map*100)) # same as fine_tuner.model

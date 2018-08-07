@@ -2,6 +2,7 @@
     Use absolute weights-based criterion for filter pruning on vggSSD
     Execute: python3 prune_weights_vggSSD.py --trained_model weights/_your_trained_model_.pth
     Author: xuhuahuang as intern in YouTu 07/2018
+    Status: checked
 '''
 import torch
 from torch.autograd import Variable
@@ -40,7 +41,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--prune_folder", default = "prunes/")
 parser.add_argument("--trained_model", default = "prunes/vggSSD_trained.pth")
 parser.add_argument('--dataset_root', default=VOC_ROOT)
-parser.add_argument("--cut_ratio", default=0.2, type=int)
+parser.add_argument("--cut_ratio", default=0.2, type=float)
 parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to train model')
 args = parser.parse_args()
 
@@ -149,6 +150,7 @@ class Prunner_vggSSD:
         self.test()
 
         print('Saving pruned model...')
+        print(self.model) # check dimension
         torch.save(self.model, 'prunes/vggSSD_prunned')
 
 if __name__ == '__main__':

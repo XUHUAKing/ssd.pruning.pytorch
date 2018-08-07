@@ -40,7 +40,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--prune_folder", default = "prunes/")
 parser.add_argument("--trained_model", default = "prunes/refineSSD_trained.pth")
 parser.add_argument('--dataset_root', default=VOC_ROOT)
-parser.add_argument("--cut_ratio", default=0.2, type=int)
+parser.add_argument("--cut_ratio", default=0.2, type=float)
 parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to train model')
 args = parser.parse_args()
 
@@ -184,6 +184,7 @@ class Prunner_resnetSSD:
         self.test()
 
         print('Saving pruned model...')
+        print(self.model) # check dimension
         torch.save(self.model, 'prunes/resnetSSD_prunned')
 
 if __name__ == '__main__':
