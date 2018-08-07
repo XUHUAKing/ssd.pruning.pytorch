@@ -40,6 +40,9 @@ parser.add_argument("--prune_folder", default = "prunes/")
 parser.add_argument("--pruned_model", default = "prunes/resnetSSD_prunned.pth")
 parser.add_argument('--dataset_root', default=VOC_ROOT)
 parser.add_argument("--cut_ratio", default=0.2, type=int)
+parser.add_argument("--lr", default=0.001, type=int)
+parser.add_argument("--momentum", default=0.9, type=int)
+parser.add_argument("--epoch", default=20, type=int)
 parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to train model')
 args = parser.parse_args()
 
@@ -191,10 +194,9 @@ if __name__ == '__main__':
     fine_tuner = FineTuner_resnetSSD(data_loader, testset, criterion, model)
 
     # ------------------------ adjustable part
-    optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
-    fine_tuner.train(optimizer = optimizer, epoches = 20)
+    optimizer = optim.SGD(self.model.parameters(), lr=args.lr, momentum=args.momentum)
+    fine_tuner.train(optimizer = optimizer, epoches = args.epoch)
     # ------------------------ adjustable part
 
     print('Saving finetuned model...')
     torch.save(model, 'prunes/resnetSSD_finetuned')
-    
