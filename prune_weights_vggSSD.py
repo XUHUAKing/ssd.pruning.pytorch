@@ -141,7 +141,7 @@ class Prunner_vggSSD:
 
                 print("Pruning layer ", layer, "..")
                 model = self.model.cpu()
-                model = prune_conv_layer_no_bn(model, layer, cut_ratio=cut_ratio)
+                model = prune_conv_layer(model, layer, cut_ratio=cut_ratio, use_bn = False)
                 self.model = model.cuda()
                 self.test()
 

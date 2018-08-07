@@ -1,6 +1,6 @@
 '''
-    Use absolute weights-based criterion for filter pruning on refineDet(vgg) (Train/Test on VOC)
-    Execute: python3 finetune_weights_refineDet.py --prune --trained_model weights/_your_trained_model_.pth
+    Finetune prunned model refineDet(vgg) (Train/Test on VOC)
+    Execute: python3 finetune_refineDet.py --pruned_model prunes/_your_prunned_model_.pth
     Author: xuhuahuang as intern in YouTu 07/2018
 '''
 import torch
@@ -18,10 +18,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 #import dataset
-from pruning.prune_tools import *
 import argparse
 from operator import itemgetter
-from heapq import nsmallest #heap queue algorithm
 import time
 
 # for testing
@@ -40,15 +38,11 @@ def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--train", dest="train", action="store_true")
-parser.add_argument("--prune", dest="prune", action="store_true")
 parser.add_argument("--prune_folder", default = "prunes/")
-parser.add_argument("--trained_model", default = "prunes/refineDet_trained.pth")
+parser.add_argument("--pruned_model", default = "prunes/refineDet_prunned.pth")
 parser.add_argument('--dataset_root', default=VOC_ROOT)
 parser.add_argument("--cut_ratio", default=0.2, type=int)
 parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to train model')
-parser.set_defaults(train=False)
-parser.set_defaults(prune=False)
 args = parser.parse_args()
 
 cfg = voc320
@@ -140,8 +134,8 @@ def test_net(save_folder, net, detector, priors, cuda,
     print('Evaluating detections')
     APs,mAP = testset.evaluate_detections(all_boxes, save_folder)
 
-# --------------------------------------------------------------------------- Pruning Part
-class PrunningFineTuner_refineDet:
+# --------------------------------------------------------------------------- Finetune Part
+class FineTuner_refineDet:
     def __init__(self, train_loader, testset, arm_criterion, odm_criterion, model):
         self.train_data_loader = train_loader
         self.testset = testset
@@ -198,36 +192,6 @@ class PrunningFineTuner_refineDet:
             label = [Variable(ann.cuda(), volatile=True) for ann in label]
             self.train_batch(optimizer, batch, label)
 
-    def prune(self, cut_ratio = 0.2):
-        #Get the accuracy before prunning
-        self.test()
-
-        self.model.train()
-
-        #Make sure all the layers are trainable
-        for param in self.model.base.parameters():
-            param.requires_grad = True
-
-        fork_indices = [21, 28, 33] #len(self.model.base)-1 = 34
-        for layer, (name, module) in enumerate(self.model.base._modules.items()):
-            if isinstance(module, torch.nn.modules.conv.Conv2d) and (layer not in fork_indices):
-
-                print("Pruning layer ", layer, "..")
-                model = self.model.cpu()
-                model = prune_conv_layer_no_bn(model, layer, cut_ratio=cut_ratio)
-                self.model = model.cuda()
-                self.test()
-
-                # print("Fine tuning to recover from prunning iteration.")
-                optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
-                # self.train(optimizer, epoches = 5) # 10
-
-        print("Finished. Going to fine tune the model a bit more")
-        self.train(optimizer, epoches = 10) # 15
-        print('Saving pruned model...')
-        print(self.model)
-        torch.save(self.model, 'prunes/refineDet_prunned')
-
 if __name__ == '__main__':
     if not args.cuda:
         print("this file only supports cuda version now!")
@@ -236,27 +200,11 @@ if __name__ == '__main__':
     if not os.path.exists(args.prune_folder):
         os.mkdir(args.prune_folder)
 
-    if args.train:
-        model = build_refine('train', cfg['min_dim'], cfg['num_classes'], use_refine = True, use_tcb = True).cuda()
-    elif args.prune:
-        # ------------------------------------------- 1st prune: load model from state_dict
-        model = build_refine('train', cfg['min_dim'], cfg['num_classes'], use_refine = True, use_tcb = True).cuda()
-        state_dict = torch.load(args.trained_model)
-        from collections import OrderedDict
-        new_state_dict = OrderedDict()
-        for k, v in state_dict.items():
-            head = k[:7] # head = k[:4]
-            if head == 'module.': # head == 'vgg.'
-                name = k[7:]  # name = 'base.' + k[4:]
-            else:
-                name = k
-            new_state_dict[name] = v
-        model.load_state_dict(new_state_dict)
-        #model.load_state_dict(torch.load(args.trained_model))
-        # ------------------------------------------- >= 2nd prune: load model from previous pruning
-        # model = torch.load(args.trained_model).cuda()
+    # load model from previous pruning
+    model = torch.load(args.pruned_model).cuda()
     print('Finished loading model!')
 
+    # data
     dataset = VOCDetection(root=args.dataset_root,
                            transform=SSDAugmentation(cfg['min_dim'], cfg['dataset_mean']))
     testset = VOCDetection(root=args.dataset_root, image_sets=[('2007', 'test')],
@@ -268,13 +216,12 @@ if __name__ == '__main__':
     arm_criterion = RefineMultiBoxLoss(2, 0.5, True, 0, True, 3, 0.5, False, 0, args.cuda)
     odm_criterion = RefineMultiBoxLoss(cfg['num_classes'], 0.5, True, 0, True, 3, 0.5, False, 0.01, args.cuda)# 0.01 -> 0.99 negative confidence threshold
 
-    fine_tuner = PrunningFineTuner_refineDet(data_loader, testset, arm_criterion, odm_criterion, model)
+    fine_tuner = FineTuner_refineDet(data_loader, testset, arm_criterion, odm_criterion, model)
 
-    if args.train:
-        fine_tuner.train(epoches = 20)
-        print('Saving trained model...')
-        torch.save(model, 'prunes/refineDet_trained') # same as fine_tuner.model
-        #torch.save(model, "model")
+    # ------------------------ adjustable part
+    optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
+    fine_tuner.train(optimizer = optimizer, epoches = 20)
+    # ------------------------ adjustable part
 
-    elif args.prune:
-        fine_tuner.prune(cut_ratio = args.cut_ratio)
+    print('Saving finetuned model...')
+    torch.save(model, 'prunes/refineDet_finetuned') # same as fine_tuner.model

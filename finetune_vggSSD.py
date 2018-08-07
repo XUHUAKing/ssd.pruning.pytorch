@@ -1,6 +1,6 @@
 '''
-    Use absolute weights-based criterion for filter pruning on vggSSD (Train/Test on VOC)
-    Execute: python3 finetune_weights_vggSSD.py --prune --trained_model weights/_your_trained_model_.pth
+    Finetune prunned model vggSSD (Train/Test on VOC)
+    Execute: python3 finetune_vggSSD.py --pruned_model prunes/_your_prunned_model_.pth
     Author: xuhuahuang as intern in YouTu 07/2018
 '''
 import torch
@@ -37,7 +37,7 @@ def str2bool(v):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--prune_folder", default = "prunes/")
-parser.add_argument("--pruned_model", default = "prunes/vggSSD_trained.pth")
+parser.add_argument("--pruned_model", default = "prunes/vggSSD_prunned.pth")
 parser.add_argument('--dataset_root', default=VOC_ROOT)
 parser.add_argument("--cut_ratio", default=0.2, type=int)
 parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to train model')
@@ -106,7 +106,7 @@ def test_net(save_folder, net, cuda,
     print('Evaluating detections')
     APs,mAP = testset.evaluate_detections(all_boxes, save_folder)
 
-# --------------------------------------------------------------------------- Pruning Part
+# --------------------------------------------------------------------------- Finetune Part
 class FineTuner_vggSSD:
     def __init__(self, train_loader, testset, criterion, model):
         self.train_data_loader = train_loader
@@ -173,7 +173,7 @@ if __name__ == '__main__':
     if not os.path.exists(args.prune_folder):
         os.mkdir(args.prune_folder)
 
-    #load model from previous pruning
+    # load model from previous pruning
     model = torch.load(args.pruned_model).cuda()
     print('Finished loading model!')
 
@@ -192,8 +192,8 @@ if __name__ == '__main__':
 
     # ------------------------ adjustable part
     optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
+    fine_tuner.train(optimizer = optimizer, epoches = 20)
     # ------------------------ adjustable part
 
-    fine_tuner.train(optimizer = optimizer, epoches = 20)
     print('Saving finetuned model...')
     torch.save(model, 'prunes/vggSSD_finetuned')

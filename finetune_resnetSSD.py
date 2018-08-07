@@ -1,6 +1,6 @@
 '''
-    Use absolute weights-based criterion for filter pruning on resnetSSD (Train/Test on VOC)
-    Execute: python3 finetune_weights_resnetSSD.py --prune --trained_model weights/_your_trained_model_.pth
+    Finetune prunned model resnetSSD (Train/Test on VOC)
+    Execute: python3 finetune_resnetSSD.py --pruned_model prunes/_your_prunned_model_.pth
     Author: xuhuahuang as intern in YouTu 07/2018
 '''
 import torch
@@ -18,10 +18,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 #import dataset
-from pruning.prune_tools import *
 import argparse
 from operator import itemgetter
-from heapq import nsmallest #heap queue algorithm
 import time
 
 # for testing
@@ -38,15 +36,11 @@ def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--train", dest="train", action="store_true")
-parser.add_argument("--prune", dest="prune", action="store_true")
 parser.add_argument("--prune_folder", default = "prunes/")
-parser.add_argument("--trained_model", default = "prunes/vggSSD_trained.pth")
+parser.add_argument("--pruned_model", default = "prunes/resnetSSD_prunned.pth")
 parser.add_argument('--dataset_root', default=VOC_ROOT)
 parser.add_argument("--cut_ratio", default=0.2, type=int)
 parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to train model')
-parser.set_defaults(train=False)
-parser.set_defaults(prune=False)
 args = parser.parse_args()
 
 cfg = voc
@@ -112,8 +106,8 @@ def test_net(save_folder, net, cuda,
     print('Evaluating detections')
     APs,mAP = testset.evaluate_detections(all_boxes, save_folder)
 
-# --------------------------------------------------------------------------- Pruning Part
-class PrunningFineTuner_resnetSSD:
+# --------------------------------------------------------------------------- Finetune Part
+class FineTuner_resnetSSD:
     def __init__(self, train_loader, testset, criterion, model):
         self.train_data_loader = train_loader
         self.testset = testset
@@ -171,79 +165,6 @@ class PrunningFineTuner_resnetSSD:
             label = [Variable(ann.cuda(), volatile=True) for ann in label]
             self.train_batch(optimizer, batch, label)
 
-    def prune(self, cut_ratio = 0.2):
-        #Get the accuracy before prunning
-        self.test()
-
-        self.model.train()
-
-        #Make sure all the layers are trainable
-        for param in self.model.base.parameters():
-            param.requires_grad = True
-
-        fork_indices = [10, 19] # 19 is the last bottlneck
-        for layer, (name, module) in enumerate(self.model.base._modules.items()):
-            if isinstance(module, torch.nn.modules.conv.Conv2d) and (layer not in fork_indices):
-                print("Pruning normal conv layer ", layer, "..")
-                model = self.model.cpu()
-                model = prune_conv_layer(model, layer, cut_ratio=cut_ratio, use_bn = True)
-                self.model = model.cuda()
-                self.test()
-
-                # print("Fine tuning to recover from prunning one layer.")
-                optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
-                # self.train(optimizer, epoches = 5) # 10
-
-            if isinstance(module, BasicBlock) and (layer not in fork_indices):
-                print("Pruning conv layer ", layer, " in BasicBlock..")
-                model = self.model.cpu()
-                # prune the left identity path
-                print("Pruning left conv layer..")
-                filters_to_prune, model = prune_resnet_lconv_layer(model, layer, cut_ratio=cut_ratio, use_bn = True):
-                # prune the right bottom corresponding conv layer
-                if filters_to_prune is not None:
-                    print("Pruning right bottom conv layer..")
-                    model = prune_rbconv_by_indices(model, layer, filters_to_prune, use_bn = True)
-                # prune the other conv layers on the residual path
-                print("Pruning right upper conv layer 1..")
-                model = prune_ruconv1_layer(model, layer, cut_ratio=cut_ratio, use_bn = True)
-
-                self.model = model.cuda()
-                self.test()
-
-                # print("Fine tuning to recover from prunning one layer.")
-                optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
-                # self.train(optimizer, epoches = 5) # 10
-
-            if isinstance(module, Bottleneck) and (layer not in fork_indices):
-                print("Pruning conv layer ", layer, " in Bottleneck..")
-                model = self.model.cpu()
-                # prune the left identity path
-                print("Pruning left conv layer..")
-                filters_to_prune, model = prune_resnet_lconv_layer(model, layer, cut_ratio=cut_ratio, use_bn = True):
-                # prune the right bottom corresponding conv layer
-                if filters_to_prune is not None:
-                    print("Pruning right bottom conv layer..")
-                    model = prune_rbconv_by_indices(model, layer, filters_to_prune, use_bn = True)
-                # prune the other conv layers on the residual path
-                print("Pruning right upper conv layer 1..")
-                model = prune_ruconv1_layer(model, layer, cut_ratio=cut_ratio, use_bn = True)
-                print("Pruning right upper conv layer 2..")
-                model = prune_ruconv2_layer(model, layer, cut_ratio=cut_ratio, use_bn = True)
-
-                self.model = model.cuda()
-                self.test()
-
-                # print("Fine tuning to recover from prunning one layer.")
-                optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
-                # self.train(optimizer, epoches = 5) # 10
-
-        print("Finished. Going to fine tune the model a bit more")
-        self.train(optimizer, epoches = 10) #15
-        print('Saving pruned model...')
-        print(self.model) # check the dimension after prunning
-        torch.save(self.model, 'prunes/resnetSSD_prunned')
-
 if __name__ == '__main__':
     if not args.cuda:
         print("this file only supports cuda version now!")
@@ -252,27 +173,11 @@ if __name__ == '__main__':
     if not os.path.exists(args.prune_folder):
         os.mkdir(args.prune_folder)
 
-    if args.train:
-        model = build_ssd('train', cfg['min_dim'], cfg['num_classes'], base='resnet').cuda()
-    elif args.prune:
-        # ------------------------------------------- 1st prune: load model from state_dict
-        model = build_ssd('train', cfg['min_dim'], cfg['num_classes'], base='resnet').cuda()
-        state_dict = torch.load(args.trained_model)
-        from collections import OrderedDict
-        new_state_dict = OrderedDict()
-        for k, v in state_dict.items():
-            head = k[:7] # head = k[:4]
-            if head == 'module.': # head == 'vgg.', module. is due to DataParellel
-                name = k[7:]  # name = 'base.' + k[4:]
-            else:
-                name = k
-            new_state_dict[name] = v
-        model.load_state_dict(new_state_dict)
-        #model.load_state_dict(torch.load(args.trained_model))
-        # ------------------------------------------- >= 2nd prune: load model from previous pruning
-        # model = torch.load(args.trained_model).cuda()
+    # load model from previous pruning
+    model = torch.load(args.pruned_model).cuda()
     print('Finished loading model!')
 
+    # data
     dataset = VOCDetection(root=args.dataset_root,
                            transform=SSDAugmentation(cfg['min_dim'], cfg['dataset_mean']))
     testset = VOCDetection(root=args.dataset_root, image_sets=[('2007', 'test')],
@@ -283,13 +188,13 @@ if __name__ == '__main__':
 
     criterion = MultiBoxLoss(cfg['num_classes'], 0.5, True, 0, True, 3, 0.5, False, args.cuda)
 
-    fine_tuner = PrunningFineTuner_resnetSSD(data_loader, testset, criterion, model)
+    fine_tuner = FineTuner_resnetSSD(data_loader, testset, criterion, model)
 
-    if args.train:
-        fine_tuner.train(epoches = 20)
-        print('Saving trained model...')
-        torch.save(model, 'prunes/vggSSD_trained')
-        #torch.save(model, "model")
+    # ------------------------ adjustable part
+    optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
+    fine_tuner.train(optimizer = optimizer, epoches = 20)
+    # ------------------------ adjustable part
 
-    elif args.prune:
-        fine_tuner.prune(cut_ratio = args.cut_ratio)
+    print('Saving finetuned model...')
+    torch.save(model, 'prunes/resnetSSD_finetuned')
+    
