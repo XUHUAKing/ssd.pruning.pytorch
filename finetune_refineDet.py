@@ -2,6 +2,7 @@
     Finetune prunned model refineDet(vgg) (Train/Test on VOC)
     Execute: python3 finetune_refineDet.py --pruned_model prunes/_your_prunned_model_.pth --lr x --epoch y
     Author: xuhuahuang as intern in YouTu 07/2018
+    Status: checked
 '''
 import torch
 from torch.autograd import Variable
@@ -232,4 +233,4 @@ if __name__ == '__main__':
     # ------------------------ adjustable part
 
     print('Saving finetuned model with map ', map, '...')
-    torch.save(model, 'prunes/refineDet_finetuned_{}'.format(map*100)) # same as fine_tuner.model
+    torch.save(model, 'prunes/refineDet_finetuned_{0:.2f}'.format(map*100)) # same as fine_tuner.model

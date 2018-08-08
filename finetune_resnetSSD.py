@@ -204,4 +204,4 @@ if __name__ == '__main__':
     # ------------------------ adjustable part
 
     print('Saving finetuned model with map ', map, '...')
-    torch.save(model, 'prunes/resnetSSD_finetuned_{}'.format(map*100))
+    torch.save(model, 'prunes/resnetSSD_finetuned_{0:.2f}'.format(map*100))

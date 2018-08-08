@@ -3,6 +3,7 @@
     Execute: python3 train_test_mobileSSD.py --evaluate True (testing while training)
     Execute: python3 train_test_mobileSSD.py (only training)
     Author: xuhuahuang as intern in YouTu 07/2018
+    Status: checked
 '''
 from data import *
 from utils.augmentations import SSDAugmentation
