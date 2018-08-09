@@ -630,7 +630,7 @@ def prune_rbconv_by_number(model, block_index, num_cut, use_bn = True):
         bias_numpy = conv.bias.data.cpu().numpy()
 
         # change size to (out_channels - cut)
-        bias = np.zeros(shape = (bias_numpy.shape[0] - len(filters_to_prune)), dtype = np.float32)
+        bias = np.zeros(shape = (bias_numpy.shape[0] - num_cut, dtype = np.float32)
         bias = np.delete(bias_numpy, filters_to_prune, axis = None)
         new_conv.bias.data = torch.from_numpy(bias).cuda()
 
@@ -647,7 +647,7 @@ def prune_rbconv_by_number(model, block_index, num_cut, use_bn = True):
     # beta: size = (num_features)
     bias_numpy = bn.bias.data.cpu().numpy()
     # change size to (out_channels - cut)
-    bias = np.zeros(shape = (bias_numpy.shape[0] - len(filters_to_prune)), dtype = np.float32)
+    bias = np.zeros(shape = (bias_numpy.shape[0] - num_cut), dtype = np.float32)
     bias = np.delete(bias_numpy, filters_to_prune)
     new_bn.bias.data = torch.from_numpy(bias).cuda()
 
