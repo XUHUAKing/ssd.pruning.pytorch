@@ -1,6 +1,9 @@
 '''
-    Use absolute weights-based criterion for filter pruning on resnetSSD
+    Use absolute weights-based criterion for filter pruning on resnetSSD (resnet50)
     Execute: python3 prune_weights_resnetSSD.py --trained_model weights/_your_trained_model_.pth
+    **Note**
+    Due to the limitation of PyTorch, if you really need to prune left path conv layer,
+    after call this file, please use prune_rbconv_by_number() MANUALLY to prune all following right bottom layers affected by your pruning
     Author: xuhuahuang as intern in YouTu 07/2018
 '''
 import torch
@@ -140,20 +143,22 @@ class Prunner_resnetSSD:
             if isinstance(module, torch.nn.modules.conv.Conv2d) and (layer not in fork_indices):
                 print("Pruning normal conv layer ", layer, "..")
                 model = self.model.cpu()
-                model = prune_conv_layer(model, layer, cut_ratio=cut_ratio, use_bn = True)
+                model = prune_resconv_layer(model, layer, cut_ratio=cut_ratio, use_bn = True)
                 self.model = model.cuda()
                 # self.test()
 
             if isinstance(module, BasicBlock) and (layer not in fork_indices):
-                print("Pruning conv layer ", layer, " in BasicBlock..")
+                print("Pruning conv layer ", layer, " (BasicBlock)..")
                 model = self.model.cpu()
-                # prune the left identity path
+                # prune the left identity path (support this function but close it for now)
+                '''
                 print("Pruning left conv layer..")
-                filters_to_prune, model = prune_resnet_lconv_layer(model, layer, cut_ratio=cut_ratio, use_bn = True):
+                filters_to_prune, model = prune_resnet_lconv_layer(model, layer, cut_ratio=cut_ratio, use_bn = True)
                 # prune the right bottom corresponding conv layer
                 if filters_to_prune is not None:
                     print("Pruning right bottom conv layer..")
                     model = prune_rbconv_by_indices(model, layer, filters_to_prune, use_bn = True)
+                '''
                 # prune the other conv layers on the residual path
                 print("Pruning right upper conv layer 1..")
                 model = prune_ruconv1_layer(model, layer, cut_ratio=cut_ratio, use_bn = True)
@@ -162,15 +167,17 @@ class Prunner_resnetSSD:
                 # self.test()
 
             if isinstance(module, Bottleneck) and (layer not in fork_indices):
-                print("Pruning conv layer ", layer, " in Bottleneck..")
+                print("Pruning conv layer ", layer, " (Bottleneck)..")
                 model = self.model.cpu()
-                # prune the left identity path
+                # prune the left identity path (support this function but close it for now)
+                '''
                 print("Pruning left conv layer..")
-                filters_to_prune, model = prune_resnet_lconv_layer(model, layer, cut_ratio=cut_ratio, use_bn = True):
+                filters_to_prune, model = prune_resnet_lconv_layer(model, layer, cut_ratio=cut_ratio, use_bn = True)
                 # prune the right bottom corresponding conv layer
                 if filters_to_prune is not None:
                     print("Pruning right bottom conv layer..")
                     model = prune_rbconv_by_indices(model, layer, filters_to_prune, use_bn = True)
+                '''
                 # prune the other conv layers on the residual path
                 print("Pruning right upper conv layer 1..")
                 model = prune_ruconv1_layer(model, layer, cut_ratio=cut_ratio, use_bn = True)

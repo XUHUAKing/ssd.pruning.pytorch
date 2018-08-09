@@ -80,9 +80,9 @@ parser.add_argument('--confidence_threshold', default=0.01, type=float,
 #parser.add_argument('--top_k', default=5, type=int,
 #                    help='Further restrict the number of predictions to parse')
 # for WEISHI dataset
-parser.add_argument('--jpg_xml_path', default='',
+parser.add_argument('--jpg_xml_path', default='', #'/cephfs/share/data/weishi_xh/train_58_0522.txt'
                     help='Image XML mapping path')
-parser.add_argument('--label_name_path', default='',
+parser.add_argument('--label_name_path', default='', #'/cephfs/share/data/weishi_xh/label58.txt'
                     help='Label Name file path')
 # for vgg or resnet backbone
 parser.add_argument("--use_res", dest="use_res", action="store_true")
@@ -147,7 +147,6 @@ def train():
         if args.label_name_path == '':
             parser.error('Must specify label_name_path if using WEISHI')
         cfg = weishi
-        # TODO: training and evaluation on WEISHI dataset
         dataset = WeishiDetection(image_xml_path=args.jpg_xml_path, label_file_path=args.label_name_path,
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          cfg['dataset_mean']))

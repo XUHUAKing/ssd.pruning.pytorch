@@ -22,7 +22,7 @@ model_urls = {
 def conv3x3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
-                     padding=1, bias=False)
+                     padding=1, bias=False) # no bias!!
 
 
 class BasicBlock(nn.Module):
@@ -111,10 +111,10 @@ class ResNet(nn.Module):
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        self.layer1 = self._make_layer(block, 64, layers[0])# stride = 1 so won't change size
-        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)# 3th halfing stride = 2 so will half size
-        self.layer3 = self._make_layer(block, 256, layers[2], stride=2) # 4th halfing
-        self.layer4 = self._make_layer(block, 512, layers[3], stride=1)# 5th halfing change from 2 to 1 for detection task
+        self.layer1 = self._make_layer(block, 64, layers[0])# stride = 1 so won't change size, need downsample
+        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)# 3th halfing stride = 2 so will half size, need downsample
+        self.layer3 = self._make_layer(block, 256, layers[2], stride=2) # 4th halfing, need downsample
+        self.layer4 = self._make_layer(block, 512, layers[3], stride=1)# 5th halfing change from 2 to 1 for detection task, no downsample
         #self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AvgPool2d(7, padding = 3, count_include_pad = False, stride=1) #avoid halfing the size in avg pool for detection task
         self.fc = nn.Linear(512 * block.expansion, num_classes)
@@ -139,7 +139,7 @@ class ResNet(nn.Module):
         # other two layers keep same
         layers = [] # this list storing the nn.module of one block! Not a nn.layer
         layers.append(block(self.inplanes, planes, stride, downsample))
-        self.inplanes = planes * block.expansion
+        self.inplanes = planes * block.expansion # after layer1, self.inplanes = planes * block.expansion
         for i in range(1, blocks):
             layers.append(block(self.inplanes, planes))#so only the first layer will do downsampling if any
 
