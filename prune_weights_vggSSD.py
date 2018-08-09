@@ -19,7 +19,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 #import dataset
-from pruning.prune_tools import *
+from pruning.prune_vgg_tools import *
 import argparse
 from operator import itemgetter
 from heapq import nsmallest #heap queue algorithm
