@@ -158,6 +158,8 @@ class Prunner_resnetSSD:
                 if filters_to_prune is not None:
                     print("Pruning right bottom conv layer..")
                     model = prune_rbconv_by_indices(model, layer, filters_to_prune, use_bn = True)
+                # call prune_rbconv_by_number() mannually
+
                 '''
                 # prune the other conv layers on the residual path
                 print("Pruning right upper conv layer 1..")
@@ -177,6 +179,8 @@ class Prunner_resnetSSD:
                 if filters_to_prune is not None:
                     print("Pruning right bottom conv layer..")
                     model = prune_rbconv_by_indices(model, layer, filters_to_prune, use_bn = True)
+                # call prune_rbconv_by_number() mannually
+
                 '''
                 # prune the other conv layers on the residual path
                 print("Pruning right upper conv layer 1..")
