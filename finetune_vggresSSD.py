@@ -1,6 +1,10 @@
 '''
     Finetune prunned model vggSSD (Train/Test on VOC)
-    Execute: python3 finetune_vggSSD.py --pruned_model prunes/_your_prunned_model_.pth --lr x --epoch y
+    Execute: python3 finetune_vggresSSD.py --pruned_model prunes/_your_prunned_model_.pth --lr x --epoch y
+
+    Finetune prunned model resnetSSD (Train/Test on VOC)
+    Execute: python3 finetune_vggresSSD.py --use_res --pruned_model prunes/_your_prunned_model_.pth --lr x --epoch y
+
     Author: xuhuahuang as intern in YouTu 07/2018
     Status: checked
 '''
@@ -45,6 +49,9 @@ parser.add_argument("--lr", default=0.001, type=float)
 parser.add_argument("--momentum", default=0.9, type=float)
 parser.add_argument("--epoch", default=20, type=int)
 parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to train model')
+# use resnet or not
+parser.add_argument("--use_res", dest="use_res", action="store_true")
+parser.set_defaults(use_res=False)
 args = parser.parse_args()
 
 cfg = voc
@@ -113,7 +120,7 @@ def test_net(save_folder, net, cuda,
     return mAP # for model storing
 
 # --------------------------------------------------------------------------- Finetune Part
-class FineTuner_vggSSD:
+class FineTuner_vggresSSD:
     def __init__(self, train_loader, testset, criterion, model):
         self.train_data_loader = train_loader
         self.testset = testset
@@ -197,7 +204,7 @@ if __name__ == '__main__':
 
     criterion = MultiBoxLoss(cfg['num_classes'], 0.5, True, 0, True, 3, 0.5, False, args.cuda)
 
-    fine_tuner = FineTuner_vggSSD(data_loader, testset, criterion, model)
+    fine_tuner = FineTuner_vggresSSD(data_loader, testset, criterion, model)
 
     # ------------------------ adjustable part
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
@@ -205,4 +212,7 @@ if __name__ == '__main__':
     # ------------------------ adjustable part
 
     print('Saving finetuned model with map ', map, '...')
-    torch.save(model, 'prunes/vggSSD_finetuned_{0:.2f}'.format(map*100))
+    if args.use_res:
+        torch.save(model, 'prunes/resnetSSD_finetuned_{0:.2f}'.format(map*100))
+    else:
+        torch.save(model, 'prunes/vggSSD_finetuned_{0:.2f}'.format(map*100))
