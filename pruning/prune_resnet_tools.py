@@ -385,7 +385,8 @@ def prune_resnet_lconv_layer(model, block_index, cut_ratio=0.2, use_bn = True):
         new_conv.bias.data = torch.from_numpy(bias).cuda()
 
     # new BN layer after new_conv
-    new_bn = torch.nn.BatchNorm2d(num_features=new_conv.out_channels, eps=lbn.eps, momentum=lbn.momentum, affine=lbn.affine)
+    new_bn = torch.nn.BatchNorm2d(num_features=new_conv.out_channels, \
+                                  eps=lbn.eps, momentum=lbn.momentum, affine=lbn.affine)
     # old_bn.affine == True, need to copy learnable gamma and beta to new_bn
     # gamma: size = (num_features)
     old_weights = lbn.weight.data.cpu().numpy()
@@ -409,7 +410,8 @@ def prune_resnet_lconv_layer(model, block_index, cut_ratio=0.2, use_bn = True):
     # delete current and replace with a brand new BLOCK
     if isinstance(blk, BasicBlock):
         # rely on conv1 of old block to get in_planes, out_planes, tride
-        new_blk = BasicBlock(blk.conv1.in_channels, blk.conv1.out_channels, blk.stride, downsample = new_ds)
+        new_blk = BasicBlock(blk.conv1.in_channels, blk.conv1.out_channels, \
+                             blk.stride, downsample = new_ds)
         # keep all layers in residual path unchanged tempararily
         new_blk.conv1 = blk.conv1
         new_blk.bn1 = blk.bn1
@@ -417,7 +419,8 @@ def prune_resnet_lconv_layer(model, block_index, cut_ratio=0.2, use_bn = True):
         new_blk.conv2 = blk.conv2
         new_blk.bn2 = blk.bn2
     else:
-        new_blk = Bottleneck(blk.conv1.in_channels, blk.conv1.out_channels, blk.stride, downsample = new_ds)
+        new_blk = Bottleneck(blk.conv1.in_channels, blk.conv1.out_channels, \
+                             blk.stride, downsample = new_ds)
         # keep all layers in residual path unchanged tempararily
         new_blk.conv1 = blk.conv1
         new_blk.bn1 = blk.bn1
@@ -523,7 +526,8 @@ def prune_rbconv_by_indices(model, block_index, filters_to_prune, use_bn = True)
 
     if isinstance(blk, BasicBlock):
         # replace with new block
-        new_blk = BasicBlock(blk.conv1.in_channels, blk.conv1.out_channels, blk.stride, downsample = blk.downsample)
+        new_blk = BasicBlock(blk.conv1.in_channels, blk.conv1.out_channels, \
+                             blk.stride, downsample = blk.downsample)
         # keep all layers in residual path unchanged tempararily
         new_blk.conv1 = blk.conv1
         new_blk.bn1 = blk.bn1
@@ -532,7 +536,8 @@ def prune_rbconv_by_indices(model, block_index, filters_to_prune, use_bn = True)
         new_blk.bn2 = new_bn # update with new bn
     else:
         # replace with new block
-        new_blk = Bottleneck(blk.conv1.in_channels, blk.conv1.out_channels, blk.stride, downsample = blk.downsample)
+        new_blk = Bottleneck(blk.conv1.in_channels, blk.conv1.out_channels, \
+                             blk.stride, downsample = blk.downsample)
         # keep all layers in residual path unchanged tempararily
         new_blk.conv1 = blk.conv1
         new_blk.bn1 = blk.bn1
@@ -630,7 +635,7 @@ def prune_rbconv_by_number(model, block_index, num_cut, use_bn = True):
         bias_numpy = conv.bias.data.cpu().numpy()
 
         # change size to (out_channels - cut)
-        bias = np.zeros(shape = (bias_numpy.shape[0] - num_cut, dtype = np.float32)
+        bias = np.zeros(shape = (bias_numpy.shape[0] - num_cut), dtype = np.float32)
         bias = np.delete(bias_numpy, filters_to_prune, axis = None)
         new_conv.bias.data = torch.from_numpy(bias).cuda()
 
@@ -768,7 +773,8 @@ def prune_ruconv1_layer(model, block_index, cut_ratio=0.2, use_bn = True):
         new_conv.bias.data = torch.from_numpy(bias).cuda() # new conv1
 
     # BatchNorm layer
-    new_bn = torch.nn.BatchNorm2d(num_features=new_conv.out_channels, eps=bn.eps, momentum=bn.momentum, affine=bn.affine)
+    new_bn = torch.nn.BatchNorm2d(num_features=new_conv.out_channels, \
+                                  eps=bn.eps, momentum=bn.momentum, affine=bn.affine)
     # gamma: size = (num_features)
     old_weights = bn.weight.data.cpu().numpy()
     new_weights = bn.weight.data.cpu().numpy()
@@ -804,7 +810,8 @@ def prune_ruconv1_layer(model, block_index, cut_ratio=0.2, use_bn = True):
 
     # replace with new block
     if isinstance(blk, BasicBlock):
-        new_blk = BasicBlock(blk.conv1.in_channels, blk.conv1.out_channels, blk.stride, downsample = blk.downsample)
+        new_blk = BasicBlock(blk.conv1.in_channels, blk.conv1.out_channels, \
+                             blk.stride, downsample = blk.downsample)
         # keep all layers in residual path unchanged tempararily
         new_blk.conv1 = new_conv
         new_blk.bn1 = new_bn
@@ -812,7 +819,8 @@ def prune_ruconv1_layer(model, block_index, cut_ratio=0.2, use_bn = True):
         new_blk.conv2 = next_new_conv # update with new conv
         new_blk.bn2 = blk.bn2 # update with new bn
     else:
-        new_blk = Bottleneck(blk.conv1.in_channels, blk.conv1.out_channels, blk.stride, downsample = blk.downsample)
+        new_blk = Bottleneck(blk.conv1.in_channels, blk.conv1.out_channels, \
+                             blk.stride, downsample = blk.downsample)
         # keep all layers in residual path unchanged tempararily
         new_blk.conv1 = new_conv
         new_blk.bn1 = new_bn
@@ -912,7 +920,8 @@ def prune_ruconv2_layer(model, block_index, cut_ratio=0.2, use_bn = True):
         new_conv.bias.data = torch.from_numpy(bias).cuda() # new conv2
 
     # BatchNorm layer
-    new_bn = torch.nn.BatchNorm2d(num_features=new_conv.out_channels, eps=bn.eps, momentum=bn.momentum, affine=bn.affine)
+    new_bn = torch.nn.BatchNorm2d(num_features=new_conv.out_channels, \
+                                  eps=bn.eps, momentum=bn.momentum, affine=bn.affine)
     # gamma: size = (num_features)
     old_weights = bn.weight.data.cpu().numpy()
     new_weights = bn.weight.data.cpu().numpy()
@@ -947,7 +956,8 @@ def prune_ruconv2_layer(model, block_index, cut_ratio=0.2, use_bn = True):
         next_new_conv.bias.data = next_conv.bias.data # new conv3
 
     # replace with new block
-    new_blk = Bottleneck(blk.conv1.in_channels, blk.conv1.out_channels, blk.stride, downsample = blk.downsample)
+    new_blk = Bottleneck(blk.conv1.in_channels, blk.conv1.out_channels, \
+                         blk.stride, downsample = blk.downsample)
     # keep all layers in residual path unchanged tempararily
     new_blk.conv1 = blk.conv1
     new_blk.bn1 = blk.bn1
