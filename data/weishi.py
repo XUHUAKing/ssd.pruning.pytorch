@@ -23,8 +23,8 @@ else:
     import xml.etree.ElementTree as ET
 
 # This list will be updated once WeishiAnnotationTransform() is called
-WEISHI_CLASSES = ('null', # always index 0
-  'face', 'clothes', 'trousers', 'bag', 'shoes', 'glasses', 'dog', 'cat', 'fish',
+WEISHI_CLASSES = ( '__background__',# always index 0
+  'null', 'face', 'clothes', 'trousers', 'bag', 'shoes', 'glasses', 'dog', 'cat', 'fish',
   'monkey', 'rabbit', 'bird', 'lobster', 'dolphin', 'panda', 'sheep', 'tiger', 'penguin',
   'turtle', 'lizard', 'snake', 'elephant', 'parrot', 'hamster', 'marmot', 'horse', 'hedgehog',
   'squirrel', 'chicken', 'guitar', 'piano', 'cello_violin', 'saxophone', 'guzheng', 'drum_kit',
@@ -45,15 +45,17 @@ class WeishiAnnotationTransform(object):
         width (int): width
     """
 
-    def __init__(self, label_file_path = "", class_to_ind=None, keep_difficult=False):
-        global WEISHI_CLASSES # declare that WEISHI_CLASSES is changed globally by this function
-        WEISHI_CLASSES = list()
-        fin = open(label_file_path, 'r')
-        for line in fin.readlines():
-            line = line.strip()
-            WEISHI_CLASSES.append(line)
-        fin.close()
-        WEISHI_CLASSES = tuple(WEISHI_CLASSES)
+    def __init__(self, label_file_path = None, class_to_ind=None, keep_difficult=False):
+        # change WEISHI_CLASSES if necessary
+        if label_file_path is not None:
+            global WEISHI_CLASSES # declare that WEISHI_CLASSES is changed globally by this function
+            WEISHI_CLASSES = list()
+            fin = open(label_file_path, 'r')
+            for line in fin.readlines():
+                line = line.strip()
+                WEISHI_CLASSES.append(line)
+            fin.close()
+            WEISHI_CLASSES = tuple(WEISHI_CLASSES)
         self.class_to_ind = class_to_ind or dict(
             zip(WEISHI_CLASSES, range(len(WEISHI_CLASSES))))
         self.keep_difficult = keep_difficult
@@ -109,7 +111,7 @@ class WeishiDetection(data.Dataset):
 
     def __init__(self, root
                  image_xml_path="input (jpg, xml) file lists",
-                 label_file_path = "",
+                 label_file_path = None,
                  transform=None,
                  dataset_name='WEISHI'):
         target_transform=WeishiAnnotationTransform(label_file_path)
@@ -231,7 +233,7 @@ class WeishiDetection(data.Dataset):
     def _write_weishi_results_file(self, all_boxes):
         for cls_ind, cls in enumerate(WEISHI_CLASSES):
             cls_ind = cls_ind
-            if cls == 'null':
+            if cls == '__background__':
                 continue
             print('Writing {} WEISHI results file'.format(cls))
             filename = self._get_weishi_results_file_template().format(cls)
@@ -260,7 +262,7 @@ class WeishiDetection(data.Dataset):
             os.mkdir(output_dir)
         for i, cls in enumerate(WEISHI_CLASSES):
 
-            if cls == 'null':
+            if cls == '__background__':
                 continue
 
             filename = self._get_weishi_results_file_template().format(cls)

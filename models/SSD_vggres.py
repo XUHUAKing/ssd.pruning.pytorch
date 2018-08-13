@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from layers import *
 from data import voc, coco, xl #from config.py
-from .backbones import vgg, vgg_base, resnet
+from .backbones import vgg, resnet
 import os
 
 # inherit nn.Module so it have .train()
@@ -300,7 +300,7 @@ def build_ssd(phase, size=300, num_classes=21, base='vgg'):
                                          mbox[str(size)], num_classes)
         return SSD_RESNET(phase, size, base_, extras_, head_, num_classes)
     else:
-        base_, extras_, head_ = vgg_multibox(vgg(vgg_base[str(size)], 3),
+        base_, extras_, head_ = vgg_multibox(vgg(),
                                          add_extras(extras[str(size)], 1024),
                                          mbox[str(size)], num_classes)
         return SSD_VGG(phase, size, base_, extras_, head_, num_classes)
