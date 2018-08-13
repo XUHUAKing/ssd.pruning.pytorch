@@ -28,10 +28,10 @@ def parse_rec(filename):
     return objects
 
 def voc_ap(rec, prec, use_07_metric=True):
-    """ ap = voc_ap(rec, prec, [use_07_metric])
+    """
+    ap = voc_ap(rec, prec, [use_07_metric])
     Compute VOC AP given precision and recall.
-    If use_07_metric is true, uses the
-    VOC 07 11 point method (default:True).
+    If use_07_metric is true, uses the VOC 07 11 point method (default:True).
     """
     if use_07_metric:
         # 11 point metric

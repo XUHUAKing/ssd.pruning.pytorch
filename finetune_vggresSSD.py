@@ -1,9 +1,9 @@
 '''
     Finetune prunned model vggSSD (Train/Test on VOC)
-    Execute: python3 finetune_vggresSSD.py --pruned_model prunes/_your_prunned_model_.pth --lr x --epoch y
+    Execute: python3 finetune_vggresSSD.py --pruned_model prunes/_your_prunned_model_ --lr x --epoch y
 
     Finetune prunned model resnetSSD (Train/Test on VOC)
-    Execute: python3 finetune_vggresSSD.py --use_res --pruned_model prunes/_your_prunned_model_.pth --lr x --epoch y
+    Execute: python3 finetune_vggresSSD.py --use_res --pruned_model prunes/_your_prunned_model_ --lr x --epoch y
 
     Author: xuhuahuang as intern in YouTu 07/2018
     Status: checked
@@ -42,7 +42,7 @@ def str2bool(v):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--prune_folder", default = "prunes/")
-parser.add_argument("--pruned_model", default = "prunes/vggSSD_prunned.pth")
+parser.add_argument("--pruned_model", default = "prunes/vggSSD_prunned")
 parser.add_argument('--dataset_root', default=VOC_ROOT)
 parser.add_argument("--cut_ratio", default=0.2, type=float)
 parser.add_argument("--lr", default=0.001, type=float)

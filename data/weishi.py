@@ -23,7 +23,7 @@ else:
 
 # This list will be updated once WeishiAnnotationTransform() is called
 # fake classes temporary
-WEISHI_CLASSES = ( #always index 0
+WEISHI_CLASSES = ( 'null',#always index 0
     'aeroplane', 'bicycle', 'bird', 'boat',
     'bottle', 'bus', 'car', 'cat', 'chair',
     'cow', 'diningtable', 'dog', 'horse',
@@ -105,14 +105,17 @@ class WeishiDetection(data.Dataset):
             (default: 'VOC2007')
     """
 
-    def __init__(self, image_xml_path="input (jpg, xml) file lists", label_file_path = "",
-                 transform=None):
+    def __init__(self,
+                 image_xml_path="input (jpg, xml) file lists",
+                 label_file_path = "",
+                 transform=None,
+                 dataset_name='WEISHI'):
         target_transform=WeishiAnnotationTransform(label_file_path)
         self.transform = transform
         self.target_transform = target_transform
         self._annopath = {}
         self._imgpath = {}
-        self.name = "weishi"
+        self.name = dataset_name
         # below two args are for evaluation dataset
         self.image_xml_path = image_xml_path
         self.ids = list() # store the names for each image
@@ -183,7 +186,7 @@ class WeishiDetection(data.Dataset):
         '''
         anno = ET.parse(self._annopath[index]).getroot()
         gt = self.target_transform(anno, 1, 1)
-        return img_id[1], gt
+        return img_id[index], gt
 
     def pull_tensor(self, index):
         '''Returns the original image at an index in tensor form
