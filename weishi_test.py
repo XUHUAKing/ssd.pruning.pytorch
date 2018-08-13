@@ -16,7 +16,7 @@ import torch.utils.data as data
 from models.SSD_vggres import build_ssd
 
 if __name__ == '__main__':
-    dataset = WeishiDetection(image_xml_path='/cephfs/share/data/weishi_xh/train_58_0713.txt', label_file_path='/cephfs/share/data/weishi_xh/label58.txt', transform = None)
+    testset = WeishiDetection(image_xml_path='/cephfs/share/data/weishi_xh/train_58_0713.txt', label_file_path='/cephfs/share/data/weishi_xh/label58.txt', transform = None)
     num_images = len(testset)
     for i in range(num_images):
         print('Testing image {:d}/{:d}....'.format(i+1, num_images))

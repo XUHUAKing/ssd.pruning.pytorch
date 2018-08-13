@@ -1,11 +1,10 @@
 """WEISHI Dataset Classes
 
-Original author: Francisco Massa
-https://github.com/fmassa/vision/blob/voc_dataset/torchvision/datasets/voc.py
-
-Updated by: Ellis Brown, Max deGroot
+Updated by: xuhuahuang as intern in YouTu 07/2018
 """
 from .config import HOME
+import pickle
+import os
 import os.path as osp
 import sys
 import torch
@@ -16,19 +15,22 @@ cv2.setNumThreads(0) # pytorch issue 1355: possible deadlock in DataLoader
 # disable it because it because it's not thread safe and causes unwanted GPU memory allocations
 cv2.ocl.setUseOpenCL(False)
 import numpy as np
+from .weishi_eval import weishi_eval
+
 if sys.version_info[0] == 2:
     import xml.etree.cElementTree as ET
 else:
     import xml.etree.ElementTree as ET
 
 # This list will be updated once WeishiAnnotationTransform() is called
-# fake classes temporary
-WEISHI_CLASSES = ( 'null',#always index 0
-    'aeroplane', 'bicycle', 'bird', 'boat',
-    'bottle', 'bus', 'car', 'cat', 'chair',
-    'cow', 'diningtable', 'dog', 'horse',
-    'motorbike', 'person', 'pottedplant',
-    'sheep', 'sofa', 'train', 'tvmonitor')
+WEISHI_CLASSES = ('null', # always index 0
+  'face', 'clothes', 'trousers', 'bag', 'shoes', 'glasses', 'dog', 'cat', 'fish',
+  'monkey', 'rabbit', 'bird', 'lobster', 'dolphin', 'panda', 'sheep', 'tiger', 'penguin',
+  'turtle', 'lizard', 'snake', 'elephant', 'parrot', 'hamster', 'marmot', 'horse', 'hedgehog',
+  'squirrel', 'chicken', 'guitar', 'piano', 'cello_violin', 'saxophone', 'guzheng', 'drum_kit',
+  'electronic_organ', 'pipa', 'erhu', 'bike', 'car', 'airplane', 'motorcycle', 'strawberry',
+  'banana', 'lemon', 'pig_peggy', 'dead_fish', 'pikachu', 'iron_man', 'spider_man',
+  'cell_phone', 'cake', 'cup', 'fountain', 'balloon', 'billards')
 
 class WeishiAnnotationTransform(object):
     """Transforms a Weishi annotation into a Tensor of bbox coords and label index
@@ -105,12 +107,13 @@ class WeishiDetection(data.Dataset):
             (default: 'VOC2007')
     """
 
-    def __init__(self,
+    def __init__(self, root
                  image_xml_path="input (jpg, xml) file lists",
                  label_file_path = "",
                  transform=None,
                  dataset_name='WEISHI'):
         target_transform=WeishiAnnotationTransform(label_file_path)
+        self.root = root # used to store detection results
         self.transform = transform
         self.target_transform = target_transform
         self._annopath = {}
@@ -118,7 +121,7 @@ class WeishiDetection(data.Dataset):
         self.name = dataset_name
         # below two args are for evaluation dataset
         self.image_xml_path = image_xml_path
-        self.ids = list() # store the names for each image
+        self.ids = list() # store the names for each image, not useful in WEISHI dataset
         fin = open(image_xml_path, "r")
         count = 0
         for line in fin.readlines():
@@ -186,7 +189,7 @@ class WeishiDetection(data.Dataset):
         '''
         anno = ET.parse(self._annopath[index]).getroot()
         gt = self.target_transform(anno, 1, 1)
-        return img_id[index], gt
+        return self.ids[index], gt
 
     def pull_tensor(self, index):
         '''Returns the original image at an index in tensor form
@@ -200,3 +203,83 @@ class WeishiDetection(data.Dataset):
             tensorized version of img, squeezed
         '''
         return torch.Tensor(self.pull_image(index)).unsqueeze_(0)
+
+    def evaluate_detections(self, all_boxes, output_dir=None):
+        """
+        all_boxes is a list of length number-of-classes.
+        Each list element is a list of length number-of-images.
+        Each of those list elements is either an empty list []
+        or a numpy array of detection.
+
+        all_boxes[class][image] = [] or np.array of shape #dets x 5
+        """
+        # write down the detection results
+        self._write_weishi_results_file(all_boxes)
+        # after getting the result file, do evaluation and store in output_dir
+        aps, map = self._do_python_eval(output_dir)
+        return aps, map
+
+    def _get_weishi_results_file_template(self):
+        # VOCdevkit/VOC2007/results/det_test_aeroplane.txt
+        filename = 'weishi_det_test' + '_{:s}.txt'
+        filedir = os.path.join(self.root, 'results')
+        if not os.path.exists(filedir):
+            os.makedirs(filedir)
+        path = os.path.join(filedir, filename)
+        return path
+
+    def _write_weishi_results_file(self, all_boxes):
+        for cls_ind, cls in enumerate(WEISHI_CLASSES):
+            cls_ind = cls_ind
+            if cls == 'null':
+                continue
+            print('Writing {} WEISHI results file'.format(cls))
+            filename = self._get_weishi_results_file_template().format(cls)
+            with open(filename, 'wt') as f:
+                for im_ind, index in enumerate(self.ids):
+                    index = index[1]
+                    dets = all_boxes[cls_ind][im_ind]
+                    if dets == []:
+                        continue
+                    for k in range(dets.shape[0]):
+                        # for a class in an image: {image_id} {score} {xcor} {xcor} {ycor} {ycor}
+                        f.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.
+                                format(index, dets[k, -1],
+                                       dets[k, 0] + 1, dets[k, 1] + 1,
+                                       dets[k, 2] + 1, dets[k, 3] + 1))
+
+    def _do_python_eval(self, output_dir='output'):
+        rootpath = self.root
+        name = self.image_set[0][1]
+        cachedir = os.path.join(self.root, 'annotations_cache')
+        aps = []
+        # Similar to VOC
+        use_07_metric = True
+        print('VOC07 metric? ' + ('Yes' if use_07_metric else 'No'))
+        if output_dir is not None and not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+        for i, cls in enumerate(WEISHI_CLASSES):
+
+            if cls == 'null':
+                continue
+
+            filename = self._get_weishi_results_file_template().format(cls)
+            # self is dataset
+            rec, prec, ap = weishi_eval(filename, self, \
+                                        cls, cachedir, ovthresh=0.5, use_07_metric=use_07_metric)
+            # AP = AVG(Precision for each of 11 Recalls's precision)
+            aps += [ap]
+            print('AP for {} = {:.4f}'.format(cls, ap))
+            if output_dir is not None:
+                with open(os.path.join(output_dir, cls + '_pr.pkl'), 'wb') as f:
+                    pickle.dump({'rec': rec, 'prec': prec, 'ap': ap}, f)
+        # MAP = AVG(AP for each object class)
+        print('Mean AP = {:.4f}'.format(np.mean(aps)))
+        print('~~~~~~~~')
+        print('Results:')
+        for ap in aps:
+            print('{:.3f}'.format(ap))
+        print('{:.3f}'.format(np.mean(aps)))
+        print('~~~~~~~~')
+        print('')
+        return aps, np.mean(aps)

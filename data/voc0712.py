@@ -12,7 +12,6 @@ import os.path as osp
 import sys
 import torch
 import torch.utils.data as data
-import torchvision.transforms as transforms
 import cv2
 cv2.setNumThreads(0) # pytorch issue 1355: possible deadlock in DataLoader
 # OpenCL may be enabled by default in OpenCV3;
@@ -113,7 +112,7 @@ class VOCDetection(data.Dataset):
         self.transform = transform
         self.target_transform = target_transform
         self.name = dataset_name
-        self._annopath = osp.join('%s', 'Annotations', '%s.xml')
+        self._annopath = osp.join('%s', 'Annotations', '%s.xml') # wait for self.ids
         self._imgpath = osp.join('%s', 'JPEGImages', '%s.jpg')
         self.ids = list() # store the names for each image
         for (year, name) in image_sets:#2007/2012 ， trainval

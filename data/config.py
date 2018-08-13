@@ -14,6 +14,7 @@ VOC_ROOT = '/cephfs/share/data/VOCdevkit/'
 XL_ROOT = '/cephfs/share/data/VOC_xlab_products'
 #COCO_ROOT = osp.join(HOME, 'data/coco/')
 COCO_ROOT = '/cephfs/share/data/coco_xy/'
+WEISHI_ROOT = '/cephfs/share/data/weishi_xh/'
 
 # ---------------- testing dataset paths
 """FOR VOC"""
@@ -32,7 +33,7 @@ coco_val_dataset_root = '/cephfs/share/data/coco_xy/'
 
 """FOR WEISHI"""
 weishi_val_dataset_root = '/cephfs/share/data/weishi_xh'
-weishi_val_imgxml_path = '/cephfs/share/data/weishi_xh/val_57_0511_new.txt'# be imported and used in train_xx.py file
+weishi_val_imgxml_path = '/cephfs/share/data/weishi_xh/val_58_0713_new.txt'# be imported and used in train_xx.py file
 
 # SSD300 CONFIGS
 voc = {
@@ -111,7 +112,7 @@ coco = {
     #'max_iter': 400000,
     'dataset_mean':(104, 117, 123),
     'testset_mean':(104, 117, 123),
-    'max_epoch': 40000,
+    'max_epoch': 300,
     'feature_maps': [38, 19, 10, 5, 3, 1],
     'min_dim': 300, # size of image
     'steps': [8, 16, 32, 64, 100, 300],
@@ -124,12 +125,12 @@ coco = {
 }
 
 weishi = {
-    'num_classes': 58,
+    'num_classes': 57, # include null
     #'lr_steps': (280000, 360000, 400000),
     #'max_iter': 400000,
     'dataset_mean':(114, 114, 114),
     'testset_mean':(114, 114, 114),
-    'max_epoch': 40000,
+    'max_epoch': 300,
     'feature_maps': [38, 19, 10, 5, 3, 1],
     'min_dim': 300, # size of image
     'steps': [8, 16, 32, 64, 100, 300],
