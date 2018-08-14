@@ -1,13 +1,20 @@
 '''
+    This file support Train + Test refineDet model with vgg backbone on VOC/XL/WEISHI/COCO dataset
+
+    (Use VOC dataset by default)
     Train + Test refineDet model
     Execute: python3 train_test_refineDet.py --evaluate True (testing while training)
     Execute: python3 train_test_refineDet.py (only training)
+
+    (Use WEISHI dataset)
+    --dataset WEISHI --dataset_root _path_for_WEISHI_ROOT --jpg_xml_path _path_of_your_jpg_xml
+
+    (Use XL dataset)
+    --dataset XL --dataset_root _path_for_XL_ROOT
+
     Author: xuhuahuang as intern in YouTu 07/2018
 '''
 from data import * # val_dataset_root, dataset_root, Timer
-from data import VOC_CLASSES as voc_labelmap
-from data import COCO_CLASSES as coco_labelmap
-from data import WEISHI_CLASSES as weishi_labelmap
 from utils.augmentations import SSDAugmentation
 from layers.box_utils import refine_nms # for detection in test_net for RefineDet
 from layers.modules import RefineMultiBoxLoss
@@ -35,12 +42,10 @@ def str2bool(v):
 parser = argparse.ArgumentParser(
     description='Refinement SSD Training With Pytorch')
 train_set = parser.add_mutually_exclusive_group()
-parser.add_argument('--dataset', default='XL', choices=['VOC', 'COCO', 'WEISHI', 'XL'],
+parser.add_argument('--dataset', default='VOC', choices=['VOC', 'COCO', 'WEISHI', 'XL'],
                     type=str, help='VOC or COCO or WEISHI or XL') #'XL', for VOC_xlab_products
-parser.add_argument('--dataset_root', default=XL_ROOT, #XL_ROOT, for VOC_xlab_products
-                    help='Dataset root directory path')
-parser.add_argument('--basenet', default='vgg16_reducedfc.pth',
-                    help='Pretrained base model')
+parser.add_argument('--dataset_root', default=VOC_ROOT,
+                    help='Dataset root directory path') #XL_ROOT, for VOC_xlab_products
 parser.add_argument('--batch_size', default=32, type=int,
                     help='Batch size for training')
 parser.add_argument('--resume', default=None, type=str,
@@ -53,7 +58,7 @@ parser.add_argument('--cuda', default=True, type=str2bool,
                     help='Use CUDA to train model')
 parser.add_argument('-we','--warm_epoch', default=1,
                     type=int, help='max epoch for retraining')
-parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float,
+parser.add_argument('--lr', '--learning_rate', default=1e-3, type=float,
                     help='initial learning rate')
 parser.add_argument('--lr_step', default=30,
                     help='Epoch interval for updating lr')
@@ -74,14 +79,14 @@ parser.add_argument('--eval_folder', default='evals/',
                     help='Directory for saving eval results')
 parser.add_argument('--confidence_threshold', default=0.01, type=float,
                     help='Detection confidence threshold')
-# top_k = (300, 200)[args.dataset == 'COCO']
 #parser.add_argument('--top_k', default=5, type=int,
 #                    help='Further restrict the number of predictions to parse')
 # for WEISHI dataset
 parser.add_argument('--jpg_xml_path', default='',
                     help='Image XML mapping path')
-parser.add_argument('--label_name_path', default='',
+parser.add_argument('--label_name_path', default=None,
                     help='Label Name file path')
+
 args = parser.parse_args()
 
 
@@ -100,56 +105,48 @@ if not os.path.exists(args.save_folder):
 if not os.path.exists(args.eval_folder):
     os.mkdir(args.eval_folder)
 
+# train/val dataset set-up
+if args.dataset == 'VOC':
+    if args.dataset_root == COCO_ROOT:
+        parser.error('Must specify dataset if specifying dataset_root')
+    cfg = voc320 # min_dim inside will ask SSDAugmentation change size of picture
+    dataset = VOCDetection(root=args.dataset_root, \
+                           transform=SSDAugmentation(cfg['min_dim'], cfg['dataset_mean']))
+    val_dataset = VOCDetection(root=voc_val_dataset_root, image_sets=[('2007', 'test')], \
+                               transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 320 originally
+elif args.dataset == 'XL':
+    if args.dataset_root != XL_ROOT:
+        parser.error('Must specify dataset_root if using XL')
+    cfg = xl320
+    dataset = XLDetection(root=args.dataset_root, \
+                          transform=SSDAugmentation(cfg['min_dim'], cfg['dataset_mean']))
+    val_dataset = XLDetection(root=xl_val_dataset_root, image_sets=['test'], \
+                              transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 320 originally
+elif args.dataset == 'WEISHI':
+    if args.jpg_xml_path == '':
+        parser.error('Must specify jpg_xml_path if using WEISHI')
+    cfg = weishi320
+    dataset = WeishiDetection(root=args.dataset_root, \
+                              image_xml_path=args.jpg_xml_path, label_file_path=args.label_name_path, \
+                              transform=SSDAugmentation(cfg['min_dim'], cfg['dataset_mean']))
+    val_dataset = WeishiDetection(root = weishi_val_dataset_root, \
+                                  image_xml_path=weishi_val_imgxml_path, label_file_path=args.label_name_path, \
+                                  transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 320 originally
+elif args.dataset == 'COCO':
+    if args.dataset_root == VOC_ROOT:
+        if not os.path.exists(COCO_ROOT):
+            parser.error('Must specify dataset_root if specifying dataset')
+        print("WARNING: Using default COCO dataset_root because " +
+              "--dataset_root was not specified.")
+        args.dataset_root = COCO_ROOT
+    cfg = coco # coco320
+    # TODO: evaluation on COCO dataset
+    dataset = COCODetection(root=args.dataset_root, \
+                            transform=SSDAugmentation(cfg['min_dim'], cfg['dataset_mean']))
+    val_dataset = COCODetection(root=coco_val_dataset_root, \
+                                transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) #320 originally
 
 def train():
-    # train/val dataset object initialization
-    if args.dataset == 'COCO':
-        if args.dataset_root == VOC_ROOT:
-            if not os.path.exists(COCO_ROOT):
-                parser.error('Must specify dataset_root if specifying dataset')
-            print("WARNING: Using default COCO dataset_root because " +
-                  "--dataset_root was not specified.")
-            args.dataset_root = COCO_ROOT
-        cfg = coco
-        dataset = COCODetection(root=args.dataset_root,
-                                transform=SSDAugmentation(cfg['min_dim'],
-                                                          cfg['dataset_mean']))
-        val_dataset = COCODetection(root=coco_val_dataset_root,
-                                transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) #320 originally
-    elif args.dataset == 'VOC':
-        if args.dataset_root == COCO_ROOT:
-            parser.error('Must specify dataset if specifying dataset_root')
-        cfg = voc320 # min_dim inside will ask SSDAugmentation change size of picture
-        dataset = VOCDetection(root=args.dataset_root,
-                               transform=SSDAugmentation(cfg['min_dim'],
-                                                         cfg['dataset_mean']))
-        val_dataset = VOCDetection(root=voc_val_dataset_root, image_sets=[('2007', 'test')],
-                                transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 320 originally
-    elif args.dataset == 'XL':
-        if args.dataset_root != XL_ROOT:
-            parser.error('Must specify dataset_root if using XL')
-        cfg = xl320
-        dataset = XLDetection(root=args.dataset_root,
-                               transform=SSDAugmentation(cfg['min_dim'],
-                                                         cfg['dataset_mean']))
-        val_dataset = XLDetection(root=xl_val_dataset_root, image_sets=['test'],
-                                transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 300 originally
-    elif args.dataset == 'WEISHI':
-        if args.jpg_xml_path == '':
-            parser.error('Must specify jpg_xml_path if using WEISHI')
-        if args.label_name_path == '':
-            parser.error('Must specify label_name_path if using WEISHI')
-        cfg = weishi
-        dataset = WeishiDetection(image_xml_path=args.jpg_xml_path, label_file_path=args.label_name_path,
-                               transform=SSDAugmentation(cfg['min_dim'],
-                                                         cfg['dataset_mean']))
-        val_dataset = WeishiDetection(image_xml_path=weishi_val_imgxml_path, label_file_path=args.label_name_path,
-                                transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 320 originally
-
-    if args.visdom:
-        import visdom
-        viz = visdom.Visdom()
-
     # network set-up
     ssd_net = build_refine('train', cfg['min_dim'], cfg['num_classes'], use_refine = True, use_tcb = True)
     net = ssd_net
@@ -162,15 +159,8 @@ def train():
         print('Resuming training, loading {}...'.format(args.resume))
         ssd_net.load_weights(args.resume)
     else:
-        vgg_weights = torch.load(args.save_folder + args.basenet)
-        print('Loading base network...')
-        ssd_net.base.load_state_dict(vgg_weights)
-
-    if args.cuda:
-        net = net.cuda()
-
-    if not args.resume:
-        print('Initializing weights...')
+        print('Using preloaded base network...') # Preloaded.
+        print('Initializing other weights...')
         # initialize newly added layers' weights with xavier method
         ssd_net.extras.apply(weights_init)
         ssd_net.trans_layers.apply(weights_init)
@@ -180,6 +170,9 @@ def train():
         ssd_net.arm_conf.apply(weights_init)
         ssd_net.odm_loc.apply(weights_init)
         ssd_net.odm_conf.apply(weights_init)
+
+    if args.cuda:
+        net = net.cuda()
 
     # otimizer and loss set-up
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum,
@@ -207,6 +200,8 @@ def train():
     print(args)
 
     if args.visdom:
+        import visdom
+        viz = visdom.Visdom()
         # initialize visdom loss plot
         vis_title = 'SSD.PyTorch on ' + dataset.name
         vis_legend = ['Loc Loss', 'Conf Loss', 'Total Loss']
@@ -238,15 +233,6 @@ def train():
         except StopIteration:
             batch_iterator = iter(data_loader)# the dataloader cannot re-initilize
             images, targets = next(batch_iterator)
-        '''
-        if (iteration % epoch_size == 0):
-            # create/update batch iterator at every epoch - re-initilize
-            batch_iterator = iter(data.DataLoader(dataset, args.batch_size,
-                                                  num_workers=args.num_workers,
-                                                  shuffle=True, collate_fn=detection_collate))
-        # load train data
-        images, targets = next(batch_iterator)
-        '''
 
         if args.visdom and iteration != 0 and (iteration % epoch_size == 0):
             # update visdom loss plot
@@ -263,15 +249,9 @@ def train():
                 # load net
                 net.eval()
                 top_k = (300, 200)[args.dataset == 'COCO']# for VOC_xlab_products
-                if args.dataset == 'VOC' or args.dataset == 'XL':# for VOC_xlab_products
-                    APs,mAP = test_net(args.eval_folder, net, detector, priors, args.cuda, val_dataset,
-                             BaseTransform(net.module.size, cfg['testset_mean']),
-                             top_k, thresh=args.confidence_threshold) # 320 originally for cfg['min_dim']
-                else:#COCO
-                    test_net(args.eval_folder, net, detector, priors, args.cuda, val_dataset,
-                             BaseTransform(net.module.size, cfg['testset_mean']),
-                             top_k, thresh=args.confidence_threshold) # DataParallel object should have module for net.module.size
-
+                APs,mAP = test_net(args.eval_folder, net, detector, priors, args.cuda, val_dataset,
+                         BaseTransform(net.module.size, cfg['testset_mean']),
+                         top_k, thresh=args.confidence_threshold) # 320 originally for cfg['min_dim']
                 net.train()
             epoch += 1
 
@@ -328,6 +308,7 @@ def train():
             print('Saving state, iter:', iteration)
             torch.save(ssd_net.state_dict(), 'weights/ssd300_refineDet_' +
                        repr(iteration) + '.pth')
+
     torch.save(ssd_net.state_dict(),
                args.save_folder + '' + args.dataset + '.pth')
 
@@ -420,8 +401,7 @@ def test_net(save_folder, net, detector, priors, cuda,
         os.mkdir(save_folder)
 
     num_images = len(testset)
-#    num_classes = (21, 81)[args.dataset == 'COCO']
-    num_classes = 25 # for VOC_xlab_products dataset
+    num_classes = cfg['num_classes']
 
     # all detections are collected into:
     #    all_boxes[cls][image] = N x 5 array of detections in
@@ -496,11 +476,9 @@ def test_net(save_folder, net, detector, priors, cuda,
         pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
 
     print('Evaluating detections')
-    if args.dataset == 'VOC' or args.dataset == 'XL':# for VOC_xlab_products
-        APs,mAP = testset.evaluate_detections(all_boxes, save_folder)
-        return APs,mAP
-    else:
-        testset.evaluate_detections(all_boxes, save_folder)
+
+    APs,mAP = testset.evaluate_detections(all_boxes, save_folder)
+    return APs,mAP
 
 if __name__ == '__main__':
     train()

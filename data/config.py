@@ -124,6 +124,22 @@ weishi = {
     'name': 'WEISHI',
 }
 
+weishi320 = {
+    'num_classes': 58,
+    'dataset_mean':(114, 114, 114),
+    'testset_mean':(114, 114, 114),
+    'max_epoch': 300,
+    'feature_maps': [40, 20, 10, 5],
+    'min_dim': 320, # size of image
+    'steps': [8, 16, 32, 64],# image_size/steps[k] = the size for kth feature map
+    'min_sizes': [32, 64, 128, 256],
+    'max_sizes': [],
+    'aspect_ratios': [[2], [2], [2], [2]],
+    'variance': [0.1, 0.2],
+    'clip': True,
+    'name': 'WEISHI320',
+}
+
 coco = {
     'num_classes': 81, #201,
     #'lr_steps': (280000, 360000, 400000),

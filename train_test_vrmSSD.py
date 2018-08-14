@@ -125,49 +125,48 @@ if not os.path.exists(args.save_folder):
 if not os.path.exists(args.eval_folder):
     os.mkdir(args.eval_folder)
 
+# train/val dataset set-up
+if args.dataset == 'VOC':
+    if args.dataset_root == COCO_ROOT:
+        parser.error('Must specify dataset if specifying dataset_root')
+    cfg = voc
+    dataset = VOCDetection(root=args.dataset_root, \
+                           transform=SSDAugmentation(cfg['min_dim'], cfg['dataset_mean']))
+    val_dataset = VOCDetection(root=voc_val_dataset_root, image_sets=[('2007', 'test')], \
+                               transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 300 originally
+elif args.dataset == 'XL':
+    if args.dataset_root != XL_ROOT:
+        parser.error('Must specify dataset_root if using XL')
+    cfg = xl
+    dataset = XLDetection(root=args.dataset_root, \
+                          transform=SSDAugmentation(cfg['min_dim'], cfg['dataset_mean']))
+    val_dataset = XLDetection(root=xl_val_dataset_root, image_sets=['test'], \
+                              transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 300 originally
+elif args.dataset == 'WEISHI':
+    if args.jpg_xml_path == '':
+        parser.error('Must specify jpg_xml_path if using WEISHI')
+    cfg = weishi
+    dataset = WeishiDetection(root=args.dataset_root, \
+                              image_xml_path=args.jpg_xml_path, label_file_path=args.label_name_path, \
+                              transform=SSDAugmentation(cfg['min_dim'], cfg['dataset_mean']))
+    val_dataset = WeishiDetection(root = weishi_val_dataset_root, \
+                                  image_xml_path=weishi_val_imgxml_path, label_file_path=args.label_name_path, \
+                                  transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 300 originally
+elif args.dataset == 'COCO':
+    if args.dataset_root == VOC_ROOT:
+        if not os.path.exists(COCO_ROOT):
+            parser.error('Must specify dataset_root if specifying dataset')
+        print("WARNING: Using default COCO dataset_root because " +
+              "--dataset_root was not specified.")
+        args.dataset_root = COCO_ROOT
+    cfg = coco
+    # TODO: evaluation on COCO dataset
+    dataset = COCODetection(root=args.dataset_root, \
+                            transform=SSDAugmentation(cfg['min_dim'], cfg['dataset_mean']))
+    val_dataset = COCODetection(root=coco_val_dataset_root, \
+                                transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 300 originally
 
 def train():
-    # train/val dataset set-up
-    if args.dataset == 'VOC':
-        if args.dataset_root == COCO_ROOT:
-            parser.error('Must specify dataset if specifying dataset_root')
-        cfg = voc
-        dataset = VOCDetection(root=args.dataset_root, \
-                               transform=SSDAugmentation(cfg['min_dim'], cfg['dataset_mean']))
-        val_dataset = VOCDetection(root=voc_val_dataset_root, image_sets=[('2007', 'test')], \
-                                   transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 300 originally
-    elif args.dataset == 'XL':
-        if args.dataset_root != XL_ROOT:
-            parser.error('Must specify dataset_root if using XL')
-        cfg = xl
-        dataset = XLDetection(root=args.dataset_root, \
-                              transform=SSDAugmentation(cfg['min_dim'], cfg['dataset_mean']))
-        val_dataset = XLDetection(root=xl_val_dataset_root, image_sets=['test'], \
-                                  transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 300 originally
-    elif args.dataset == 'WEISHI':
-        if args.jpg_xml_path == '':
-            parser.error('Must specify jpg_xml_path if using WEISHI')
-        cfg = weishi
-        dataset = WeishiDetection(root=args.dataset_root, \
-                                  image_xml_path=args.jpg_xml_path, label_file_path=args.label_name_path, \
-                                  transform=SSDAugmentation(cfg['min_dim'], cfg['dataset_mean']))
-        val_dataset = WeishiDetection(root = weishi_val_dataset_root, \
-                                      image_xml_path=weishi_val_imgxml_path, label_file_path=args.label_name_path, \
-                                      transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 300 originally
-    elif args.dataset == 'COCO':
-        if args.dataset_root == VOC_ROOT:
-            if not os.path.exists(COCO_ROOT):
-                parser.error('Must specify dataset_root if specifying dataset')
-            print("WARNING: Using default COCO dataset_root because " +
-                  "--dataset_root was not specified.")
-            args.dataset_root = COCO_ROOT
-        cfg = coco
-        # TODO: evaluation on COCO dataset
-        dataset = COCODetection(root=args.dataset_root, \
-                                transform=SSDAugmentation(cfg['min_dim'], cfg['dataset_mean']))
-        val_dataset = COCODetection(root=coco_val_dataset_root, \
-                                    transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 300 originally
-
     # network set-up
     if args.use_res:
         ssd_net = build_ssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='resnet') # for resnet
