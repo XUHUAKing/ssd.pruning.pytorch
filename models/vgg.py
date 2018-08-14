@@ -7,7 +7,7 @@ import torch.nn as nn
 # This function is derived from torchvision VGG make_layers()
 # https://github.com/pytorch/vision/blob/master/torchvision/models/vgg.py
 # cfg is a list of string
-def vgg(cfg, i, batch_norm=False):
+def vgg(cfg, i=3, refine = False, batch_norm=False):
     layers = []
     in_channels = i
     for v in cfg:
@@ -22,12 +22,15 @@ def vgg(cfg, i, batch_norm=False):
             else:
                 layers += [conv2d, nn.ReLU(inplace=True)]
             in_channels = v
-    pool5 = nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
+    if not refine:
+        pool5 = nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
+    else:
+        pool5 = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
     conv6 = nn.Conv2d(512, 1024, kernel_size=3, padding=6, dilation=6)# fc6 and fc7 are changed to conv layers
     conv7 = nn.Conv2d(1024, 1024, kernel_size=1)
     layers += [pool5, conv6,
                nn.ReLU(inplace=True), conv7, nn.ReLU(inplace=True)]
-    return layers
+    return nn.Sequential(*layers)
 
 
 vgg_base = {
@@ -37,11 +40,10 @@ vgg_base = {
 }
 
 class VGG(nn.Module):
-    def __init__(self, cfg, i, batch_norm=False):
+    def __init__(self, refine = False, i=3, batch_norm=False):
         super(VGG, self).__init__()
-
-    self.features = nn.Sequential(vgg(vgg_base['300'], 3))
-    # no classifier for this self-designed VGG
+        self.features = vgg(vgg_base['300'], i, refine = refine, batch_norm = batch_norm)
+        # no classifier for this self-designed VGG
 
     def forward(self, x):
         return x

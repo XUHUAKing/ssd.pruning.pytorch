@@ -62,7 +62,7 @@ parser.add_argument('--confidence_threshold', default=0.01, type=float,
 #                    help='Further restrict the number of predictions to parse')
 parser.add_argument('--cuda', default=True, type=str2bool,
                     help='Use cuda to train model')
-parser.add_argument('--voc_root', default= XL_ROOT,# VOC_ROOT, for VOC_xlab_products dataset
+parser.add_argument('--voc_root', default= VOC_ROOT,# XL_ROOT, for VOC_xlab_products dataset
                     help='Location of XL root directory')
 parser.add_argument('--cleanup', default=True, type=str2bool,
                     help='Cleanup and remove results files following eval')
@@ -92,7 +92,7 @@ else:
     torch.set_default_tensor_type('torch.FloatTensor')
 
 set_type = 'test'
-cfg = xl #voc, for VOC_xlab_products dataset
+cfg = voc #xl, for VOC_xlab_products dataset
 
 # test function for vggSSD
 """
@@ -194,12 +194,12 @@ if __name__ == '__main__':
     net.eval()
     print('Finished loading model!')
     # load data
-    dataset = XLDetection(args.voc_root, [set_type], # for VOC_xlab_products dataset
-                           BaseTransform(300, cfg['dataset_mean']),
-                           XLAnnotationTransform())
-#    dataset = VOCDetection(args.voc_root, [('2007', set_type)],
+#    dataset = XLDetection(args.voc_root, [set_type], # for VOC_xlab_products dataset
 #                           BaseTransform(300, cfg['dataset_mean']),
-#                           VOCAnnotationTransform())
+#                           XLAnnotationTransform())
+    dataset = VOCDetection(args.voc_root, [('2007', set_type)],
+                           BaseTransform(300, cfg['dataset_mean']),
+                           VOCAnnotationTransform())
     if args.cuda:
         net = net.cuda()
         cudnn.benchmark = True

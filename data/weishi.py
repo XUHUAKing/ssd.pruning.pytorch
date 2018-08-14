@@ -109,7 +109,7 @@ class WeishiDetection(data.Dataset):
             (default: 'VOC2007')
     """
 
-    def __init__(self, root
+    def __init__(self, root,
                  image_xml_path="input (jpg, xml) file lists",
                  label_file_path = None,
                  transform=None,

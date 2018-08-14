@@ -5,9 +5,9 @@ from .resnet import *
 from .mobilenetv1 import *
 from .mobilenetv2 import *
 
-
-def vgg():
-    model = VGG()
+# refine: use for refineDet or not
+def vgg(refine = False):
+    model = VGG(refine) # pool5 doesn't have weights, so refine or not can use same weights
     model.load_state_dict(torch.load('weights/vgg16_reducedfc.pth'))
     return model.vgg_layers() # exclude fc already
 

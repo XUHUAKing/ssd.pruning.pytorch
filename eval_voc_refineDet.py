@@ -3,16 +3,21 @@ from __future__ import print_function
     Model evaluation on VOC for refineDet separately
     Execute: python3 eval_voc_refineDet.py --trained_model weights/_your_trained_refineDet_model_.pth
     (Take care of different versions of .pth file, can be solved by changing state_dict)
+
     Author: xuhuahuang as intern in YouTu 07/2018
-    Status: checked
 """
 
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.autograd import Variable
-# from data import VOC_CLASSES as labelmap
-from data import XL_CLASSES as labelmap # for VOC_xlab_products dataset
+
+# for evaluation on refineDet
+from data import * # val_dataset_root, dataset_root
+from layers.box_utils import refine_nms # for detection in test_net for RefineDet
+from layers.functions import RefineDetect, PriorBox
+from models.RefineSSD_vgg import build_refine
+import torch.utils.data as data
 
 import sys
 import os
@@ -25,13 +30,6 @@ cv2.setNumThreads(0) # pytorch issue 1355: possible deadlock in DataLoader
 # OpenCL may be enabled by default in OpenCV3;
 # disable it because it because it's not thread safe and causes unwanted GPU memory allocations
 cv2.ocl.setUseOpenCL(False)
-
-# for evaluation on refineDet
-from data import * # val_dataset_root, dataset_root
-from layers.box_utils import refine_nms # for detection in test_net for RefineDet
-from layers.functions import RefineDetect, PriorBox
-from models.RefineSSD_vgg import build_refine
-import torch.utils.data as data
 
 if sys.version_info[0] == 2:
     import xml.etree.cElementTree as ET
@@ -56,10 +54,8 @@ parser.add_argument('--confidence_threshold', default=0.01, type=float,
 #                    help='Further restrict the number of predictions to parse')
 parser.add_argument('--cuda', default=True, type=str2bool,
                     help='Use cuda to train model')
-#parser.add_argument('--voc_root', default=VOC_ROOT,
-#                   help='Location of VOC root directory')
-parser.add_argument('--voc_root', default=XL_ROOT,
-                    help='Location of XL root directory') # for VOC_xlab_products dataset
+parser.add_argument('--voc_root', default=VOC_ROOT, #XL_ROOT, for VOC_xlab_products dataset
+                    help='Location of XL root directory')
 parser.add_argument('--cleanup', default=True, type=str2bool,
                     help='Cleanup and remove results files following eval')
 
@@ -79,7 +75,7 @@ else:
     torch.set_default_tensor_type('torch.FloatTensor')
 
 set_type = 'test'
-cfg = xl320 # for VOC_xlab_products dataset ,voc320
+cfg = voc320 #xl320, for VOC_xlab_products dataset
 
 priorbox = PriorBox(cfg)
 priors = Variable(priorbox.forward(), volatile=True)
@@ -103,7 +99,7 @@ def test_net(save_folder, net, detector, priors, cuda,
         os.mkdir(save_folder)
 
     num_images = len(testset)
-    num_classes = len(labelmap)                      # +1 for background
+    num_classes = cfg['num_classes']
     # all detections are collected into:
     #    all_boxes[cls][image] = N x 5 array of detections in
     #    (x1, y1, x2, y2, score)
@@ -179,7 +175,7 @@ def test_net(save_folder, net, detector, priors, cuda,
 
 if __name__ == '__main__':
     # load net
-    num_classes = len(labelmap)                      # +1 for background
+    num_classes = cfg['num_classes']
     net = build_refine('test', 320, num_classes, use_refine = True, use_tcb = True) # use_tcb = False
     # if you want to eval refineDet from original version ssd.pytorch due to DataParellel
     '''
@@ -204,12 +200,12 @@ if __name__ == '__main__':
     net.eval()
     print('Finished loading model!')
     # load data
-#    dataset = VOCDetection(args.voc_root, [('2007', set_type)],
-#                           BaseTransform(320, cfg['dataset_mean']),
-#                           VOCAnnotationTransform())
-    dataset = XLDetection(args.voc_root, [set_type], # for VOC_xlab_products dataset
+    dataset = VOCDetection(args.voc_root, [('2007', set_type)],
                            BaseTransform(320, cfg['dataset_mean']),
-                           XLAnnotationTransform())
+                           VOCAnnotationTransform())
+#    dataset = XLDetection(args.voc_root, [set_type], # for VOC_xlab_products dataset
+#                           BaseTransform(320, cfg['dataset_mean']),
+#                           XLAnnotationTransform())
     if args.cuda:
         net = net.cuda()
         cudnn.benchmark = True
