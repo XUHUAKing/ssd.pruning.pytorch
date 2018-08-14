@@ -33,7 +33,7 @@ coco_val_dataset_root = '/cephfs/share/data/coco_xy/'
 
 """FOR WEISHI"""
 weishi_val_dataset_root = '/cephfs/share/data/weishi_xh'
-weishi_val_imgxml_path = '/cephfs/share/data/weishi_xh/val_58_0713_new.txt'# be imported and used in train_xx.py file
+weishi_val_imgxml_path = '/cephfs/share/data/weishi_xh/val_58_0713.txt'# be imported and used in train_xx.py file
 
 # SSD300 CONFIGS
 voc = {

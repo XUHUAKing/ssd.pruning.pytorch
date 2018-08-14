@@ -19,7 +19,7 @@
     Execute: python3 train_test_vrmSSD.py --use_m2 (only training)
 
     (Use WEISHI dataset)
-    --dataset WEISHI --dataset_root _path_for_WEISHI_ROOT --jpg_xml_path _path_of_your_jpg_xml
+    --dataset WEISHI --dataset_root _path_for_WEISHI_ROOT --jpg_xml_path _path_to_your_jpg_xml_txt
 
     (Use XL dataset)
     --dataset XL --dataset_root _path_for_XL_ROOT
@@ -93,7 +93,7 @@ parser.add_argument('--confidence_threshold', default=0.01, type=float,
 #parser.add_argument('--top_k', default=5, type=int,
 #                    help='Further restrict the number of predictions to parse')
 # for WEISHI dataset
-parser.add_argument('--jpg_xml_path', default='', #'/cephfs/share/data/weishi_xh/train_58_0522.txt'
+parser.add_argument('--jpg_xml_path', default='', #'/cephfs/share/data/weishi_xh/train_58_0713.txt'
                     help='Image XML mapping path')
 parser.add_argument('--label_name_path', default=None, #'/cephfs/share/data/weishi_xh/label58.txt'
                     help='Label Name file path')

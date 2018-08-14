@@ -252,7 +252,6 @@ class WeishiDetection(data.Dataset):
 
     def _do_python_eval(self, output_dir='output'):
         rootpath = self.root
-        name = self.image_set[0][1]
         cachedir = os.path.join(self.root, 'annotations_cache')
         aps = []
         # Similar to VOC
