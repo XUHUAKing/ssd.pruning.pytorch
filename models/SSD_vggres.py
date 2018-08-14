@@ -3,8 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from layers import *
-from data import voc, coco, xl #from config.py
-from .backbones import vgg, vgg_base, resnet
+from data import voc, coco, xl, weishi #from config.py
+from .backbones import vgg, resnet
 import os
 
 # inherit nn.Module so it have .train()
@@ -26,14 +26,11 @@ class SSD_VGG(nn.Module):
         head: "multibox head" consists of loc and conf conv layers
     """
 
-    def __init__(self, phase, size, base, extras, head, num_classes):
+    def __init__(self, phase, size, base, extras, head, num_classes, cfg):
         super(SSD_VGG, self).__init__()
         self.phase = phase
         self.num_classes = num_classes
-        if num_classes == 25: # for VOC_xlab_products dataset
-            self.cfg = xl
-        else:
-            self.cfg = (coco, voc)[num_classes == 21]#when num_classes==21, i.e. true/[1], then voc is chosen
+        self.cfg = cfg
         self.priorbox = PriorBox(self.cfg)
         # just create an object above, but need to call forward() to return prior boxes coords
         self.priors = Variable(self.priorbox.forward(), volatile=True)
@@ -136,14 +133,11 @@ class SSD_RESNET(nn.Module):
     added multibox conv layers.
     """
 
-    def __init__(self, phase, size, base, extras, head, num_classes):
+    def __init__(self, phase, size, base, extras, head, num_classes, cfg):
         super(SSD_RESNET, self).__init__()
         self.phase = phase
         self.num_classes = num_classes
-        if num_classes == 25: # for VOC_xlab_products dataset
-            self.cfg = xl
-        else:
-            self.cfg = (coco, voc)[num_classes == 21]#when num_classes==21, i.e. true/[1], then voc is chosen
+        self.cfg = cfg
         self.priorbox = PriorBox(self.cfg)
         # just create an object above, but need to call forward() to return prior boxes coords
         self.priors = Variable(self.priorbox.forward(), volatile=True)
@@ -285,7 +279,7 @@ mbox = {
 }
 
 
-def build_ssd(phase, size=300, num_classes=21, base='vgg'):
+def build_ssd(phase, cfg, size=300, num_classes=21, base='vgg'):
     if phase != "test" and phase != "train":
         print("ERROR: Phase: " + phase + " not recognized")
         return
@@ -298,9 +292,9 @@ def build_ssd(phase, size=300, num_classes=21, base='vgg'):
         base_, extras_, head_ = resnet_multibox(resnet(),
                                          add_extras(extras[str(size)], 2048),
                                          mbox[str(size)], num_classes)
-        return SSD_RESNET(phase, size, base_, extras_, head_, num_classes)
+        return SSD_RESNET(phase, size, base_, extras_, head_, num_classes, cfg)
     else:
-        base_, extras_, head_ = vgg_multibox(vgg(vgg_base[str(size)], 3),
+        base_, extras_, head_ = vgg_multibox(vgg(),
                                          add_extras(extras[str(size)], 1024),
                                          mbox[str(size)], num_classes)
-        return SSD_VGG(phase, size, base_, extras_, head_, num_classes)
+        return SSD_VGG(phase, size, base_, extras_, head_, num_classes, cfg)

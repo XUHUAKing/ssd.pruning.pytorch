@@ -49,8 +49,8 @@ parser.add_argument('--save_folder', default='eval/', type=str,
                     help='File path to save results')
 parser.add_argument('--confidence_threshold', default=0.01, type=float,
                     help='Detection confidence threshold')
-parser.add_argument('--top_k', default=5, type=int,
-                    help='Further restrict the number of predictions to parse')
+#parser.add_argument('--top_k', default=5, type=int,
+#                    help='Further restrict the number of predictions to parse')
 parser.add_argument('--cuda', default=True, type=str2bool,
                     help='Use cuda to train model')
 # parser.add_argument('--voc_root', default= VOC_ROOT,
@@ -150,8 +150,8 @@ def test_net(save_folder, net, cuda,
 if __name__ == '__main__':
     # load net
     num_classes = len(labelmap)                      # +1 for background
-    net = build_mssd('test', 300, num_classes, base='m1') # backbone network is m1
-#    net = build_mssd('test', 300, num_classes, base='m2') # backbone network is m2
+    net = build_mssd('test', cfg, 300, num_classes, base='m1') # backbone network is m1
+#    net = build_mssd('test', cfg, 300, num_classes, base='m2') # backbone network is m2
     # if you want to eval SSD from original version ssd.pytorch because self.vgg was changed to self.base
     '''
     # load resume SSD network
@@ -182,6 +182,7 @@ if __name__ == '__main__':
         net = net.cuda()
         cudnn.benchmark = True
     # evaluation
+    top_k = (300, 200)[args.dataset == 'COCO'] # for VOC_xlab_products
     test_net(args.save_folder, net, args.cuda, dataset,
-             BaseTransform(net.size, cfg['dataset_mean']), args.top_k,
+             BaseTransform(net.size, cfg['dataset_mean']), top_k,
              thresh=args.confidence_threshold)

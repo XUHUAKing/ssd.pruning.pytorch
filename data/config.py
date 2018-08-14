@@ -8,7 +8,7 @@ HOME = os.path.expanduser("~")
 COLORS = ((255, 0, 0, 128), (0, 255, 0, 128), (0, 0, 255, 128),
           (0, 255, 255, 128), (255, 0, 255, 128), (255, 255, 0, 128))
 
-# ---------------- training dataset paths
+# ---------------- training dataset paths, need to input manually when calling .py file
 # VOC_ROOT = osp.join(HOME, "data/VOCdevkit/")
 VOC_ROOT = '/cephfs/share/data/VOCdevkit/'
 XL_ROOT = '/cephfs/share/data/VOC_xlab_products'
@@ -106,26 +106,8 @@ xl320 = {
     'name': 'XL320',
 }
 
-coco = {
-    'num_classes': 201,
-    #'lr_steps': (280000, 360000, 400000),
-    #'max_iter': 400000,
-    'dataset_mean':(104, 117, 123),
-    'testset_mean':(104, 117, 123),
-    'max_epoch': 300,
-    'feature_maps': [38, 19, 10, 5, 3, 1],
-    'min_dim': 300, # size of image
-    'steps': [8, 16, 32, 64, 100, 300],
-    'min_sizes': [21, 45, 99, 153, 207, 261],
-    'max_sizes': [45, 99, 153, 207, 261, 315],
-    'aspect_ratios': [[2], [2, 3], [2, 3], [2, 3], [2], [2]],
-    'variance': [0.1, 0.2],
-    'clip': True,
-    'name': 'COCO',
-}
-
 weishi = {
-    'num_classes': 57, # include null
+    'num_classes': 58, # include null
     #'lr_steps': (280000, 360000, 400000),
     #'max_iter': 400000,
     'dataset_mean':(114, 114, 114),
@@ -140,4 +122,22 @@ weishi = {
     'variance': [0.1, 0.2],
     'clip': True,
     'name': 'WEISHI',
+}
+
+coco = {
+    'num_classes': 81, #201,
+    #'lr_steps': (280000, 360000, 400000),
+    #'max_iter': 400000,
+    'dataset_mean':(104, 117, 123),
+    'testset_mean':(104, 117, 123),
+    'max_epoch': 300,
+    'feature_maps': [38, 19, 10, 5, 3, 1],
+    'min_dim': 300, # size of image
+    'steps': [8, 16, 32, 64, 100, 300],
+    'min_sizes': [21, 45, 99, 153, 207, 261],
+    'max_sizes': [45, 99, 153, 207, 261, 315],
+    'aspect_ratios': [[2], [2, 3], [2, 3], [2, 3], [2], [2]],
+    'variance': [0.1, 0.2],
+    'clip': True,
+    'name': 'COCO',
 }

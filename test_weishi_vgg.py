@@ -88,7 +88,7 @@ def test_net(save_folder, net, cuda, testset, transform, thresh):
 def test_voc():
     # load net
     num_classes = weishi['num_classes'] # +1 background
-    net = build_ssd('test', 300, num_classes, base='vgg') # initialize SSD
+    net = build_ssd('test', cfg, 300, num_classes, base='vgg') # initialize SSD
     net.load_state_dict(torch.load(args.trained_model))
     net.eval()
     print('Finished loading model!')

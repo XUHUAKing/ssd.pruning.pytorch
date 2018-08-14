@@ -1,7 +1,17 @@
 '''
+    This file support Train + Test SSD model with mobileNet backbone on VOC/XL/WEISHI/COCO dataset
+
+    (Use VOC dataset by default)
     Train + Test SSD model with mobileNet backbone
     Execute: python3 train_test_mobileSSD.py --evaluate True (testing while training)
     Execute: python3 train_test_mobileSSD.py (only training)
+
+    (Use WEISHI dataset)
+    --dataset WEISHI --dataset_root _path_for_WEISHI_ROOT --jpg_xml_path _path_of_your_jpg_xml
+
+    (Use XL dataset)
+    --dataset XL --dataset_root _path_for_XL_ROOT
+
     Author: xuhuahuang as intern in YouTu 07/2018
     Status: checked
 '''
@@ -145,8 +155,8 @@ def train():
         import visdom
         viz = visdom.Visdom()
 
-#    ssd_net = build_mssd('train', cfg['min_dim'], cfg['num_classes'], base='m1') # backbone network is m1
-    ssd_net = build_mssd('train', cfg['min_dim'], cfg['num_classes'], base='m2') # backbone network is m2
+#    ssd_net = build_mssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='m1') # backbone network is m1
+    ssd_net = build_mssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='m2') # backbone network is m2
     net = ssd_net
 
     if args.cuda:

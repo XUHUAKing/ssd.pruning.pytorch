@@ -162,7 +162,7 @@ if __name__ == '__main__':
         os.mkdir(args.prune_folder)
 
     # ------------------------------------------- 1st prune: load model from state_dict
-    model = build_ssd('train', cfg['min_dim'], cfg['num_classes'], base='vgg').cuda()
+    model = build_ssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='vgg').cuda()
     state_dict = torch.load(args.trained_model)
     from collections import OrderedDict
     new_state_dict = OrderedDict()

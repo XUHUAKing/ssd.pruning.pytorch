@@ -1,7 +1,7 @@
 '''
     Finetune prunned model refineDet(vgg) (Train/Test on VOC)
     Execute: python3 finetune_refineDet.py --pruned_model prunes/_your_prunned_model --lr x --epoch y
-    
+
     Author: xuhuahuang as intern in YouTu 07/2018
     Status: checked
 '''
@@ -34,7 +34,6 @@ from utils.augmentations import SSDAugmentation
 from layers.box_utils import refine_nms # for detection in test_net for RefineDet
 from layers.modules import RefineMultiBoxLoss
 from layers.functions import RefineDetect, PriorBox
-from models.RefineSSD_vgg import build_refine
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")

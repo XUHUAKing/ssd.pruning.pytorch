@@ -26,14 +26,11 @@ class SSD_MobN1(nn.Module):
         head: "multibox head" consists of loc and conf conv layers
     """
 
-    def __init__(self, phase, size, base, extras, head, num_classes):
+    def __init__(self, phase, size, base, extras, head, num_classes, cfg):
         super(SSD_MobN1, self).__init__()
         self.phase = phase
         self.num_classes = num_classes
-        if num_classes == 25: # for VOC_xlab_products dataset
-            self.cfg = xl
-        else:
-            self.cfg = (coco, voc)[num_classes == 21]#when num_classes==21, i.e. true/[1], then voc is chosen
+        self.cfg = cfg
         self.priorbox = PriorBox(self.cfg)
         # just create an object above, but need to call forward() to return prior boxes coords
         self.priors = Variable(self.priorbox.forward(), volatile=True)
@@ -133,14 +130,11 @@ class SSD_MobN2(nn.Module):
     added multibox conv layers.  Each multibox layer branches into
     """
 
-    def __init__(self, phase, size, base, extras, head, num_classes):
+    def __init__(self, phase, size, base, extras, head, num_classes, cfg):
         super(SSD_MobN2, self).__init__()
         self.phase = phase
         self.num_classes = num_classes
-        if num_classes == 25: # for VOC_xlab_products dataset
-            self.cfg = xl
-        else:
-            self.cfg = (coco, voc)[num_classes == 21]#when num_classes==21, i.e. true/[1], then voc is chosen
+        self.cfg = cfg
         self.priorbox = PriorBox(self.cfg)
         # just create an object above, but need to call forward() to return prior boxes coords
         self.priors = Variable(self.priorbox.forward(), volatile=True)
@@ -281,7 +275,7 @@ mbox = {
     '512': [],
 }
 
-def build_mssd(phase, size=300, num_classes=21, base='m1', width_mult = 1.):
+def build_mssd(phase, cfg, size=300, num_classes=21, base='m1', width_mult = 1.):
     if phase != "test" and phase != "train":
         print("ERROR: Phase: " + phase + " not recognized")
         return
@@ -294,9 +288,9 @@ def build_mssd(phase, size=300, num_classes=21, base='m1', width_mult = 1.):
         base_, extras_, head_ = mob2_multibox(mobilenetv2(width_mult),
                                          add_extras(extras[str(size)], int(1280 * width_mult) if width_mult > 1.0 else 1280),
                                          mbox[str(size)], num_classes)
-        return SSD_MobN2(phase, size, base_, extras_, head_, num_classes)
+        return SSD_MobN2(phase, size, base_, extras_, head_, num_classes, cfg)
     else:
         base_, extras_, head_ = mob1_multibox(mobilenetv1(),
                                          add_extras(extras[str(size)], 1024),
                                          mbox[str(size)], num_classes)
-        return SSD_MobN1(phase, size, base_, extras_, head_, num_classes)
+        return SSD_MobN1(phase, size, base_, extras_, head_, num_classes, cfg)

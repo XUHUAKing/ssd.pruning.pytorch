@@ -35,7 +35,6 @@ from data import VOC_CLASSES as labelmap
 import torch.utils.data as data
 from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
-from models.SSD_vggres import build_ssd
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
