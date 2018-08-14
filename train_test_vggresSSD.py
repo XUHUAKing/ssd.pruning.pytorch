@@ -176,6 +176,14 @@ def train():
         ssd_net.load_weights(args.resume)
     else:
         print('Using preloaded base network...') # Preloaded.
+<<<<<<< HEAD
+=======
+
+    if args.cuda:
+        net = net.cuda()
+
+    if not args.resume:
+>>>>>>> dbb1f2f4ce3e971eff98a93b3589f0b1b0101d69
         print('Initializing weights...')
         # initialize newly added layers' weights with xavier method
         ssd_net.extras.apply(weights_init)
