@@ -1,14 +1,22 @@
 '''
-    This file support Train + Test SSD model with vgg/resnet backbone on VOC/XL/WEISHI/COCO dataset
+    This file support Train + Test SSD model with vgg/resnet/mobilev1/mobilev2 backbone on VOC/XL/WEISHI/COCO dataset
 
     (Use VOC dataset by default)
     Train + Test SSD model with vgg backbone
-    Execute: python3 train_test_vggresSSD.py --evaluate True (testing while training)
-    Execute: python3 train_test_vggresSSD.py (only training)
+    Execute: python3 train_test_vrmSSD.py --evaluate True (testing while training)
+    Execute: python3 train_test_vrmSSD.py (only training)
 
     Train + Test SSD model with resnet backbone
-    Execute: python3 train_test_vggresSSD.py --use_res --evaluate True (testing while training)
-    Execute: python3 train_test_vggresSSD.py --use_res (only training)
+    Execute: python3 train_test_vrmSSD.py --use_res --evaluate True (testing while training)
+    Execute: python3 train_test_vrmSSD.py --use_res (only training)
+
+    Train + Test SSD model with mobilev1 backbone
+    Execute: python3 train_test_vrmSSD.py --use_m1 --evaluate True (testing while training)
+    Execute: python3 train_test_vrmSSD.py --use_m1 (only training)
+
+    Train + Test SSD model with mobilev2 backbone
+    Execute: python3 train_test_vrmSSD.py --use_m2 --evaluate True (testing while training)
+    Execute: python3 train_test_vrmSSD.py --use_m2 (only training)
 
     (Use WEISHI dataset)
     --dataset WEISHI --dataset_root _path_for_WEISHI_ROOT --jpg_xml_path _path_of_your_jpg_xml
@@ -17,12 +25,12 @@
     --dataset XL --dataset_root _path_for_XL_ROOT
 
     Author: xuhuahuang as intern in YouTu 07/2018
-    Status: checked
 '''
 from data import *
 from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
 from models.SSD_vggres import build_ssd
+from models.SSD_mobile import build_mssd
 import os
 import sys
 import time
@@ -89,9 +97,15 @@ parser.add_argument('--jpg_xml_path', default='', #'/cephfs/share/data/weishi_xh
                     help='Image XML mapping path')
 parser.add_argument('--label_name_path', default=None, #'/cephfs/share/data/weishi_xh/label58.txt'
                     help='Label Name file path')
-# for vgg or resnet backbone
+# for resnet backbone
 parser.add_argument("--use_res", dest="use_res", action="store_true")
 parser.set_defaults(use_res=False)
+# for mobilev1 backbone
+parser.add_argument("--use_m1", dest="use_m1", action="store_true")
+parser.set_defaults(use_m1=False)
+# for mobilev2 backbone
+parser.add_argument("--use_m2", dest="use_m2", action="store_true")
+parser.set_defaults(use_m2=False)
 
 args = parser.parse_args()
 
@@ -113,7 +127,7 @@ if not os.path.exists(args.eval_folder):
 
 
 def train():
-    # train/val dataset object initialization
+    # train/val dataset set-up
     if args.dataset == 'VOC':
         if args.dataset_root == COCO_ROOT:
             parser.error('Must specify dataset if specifying dataset_root')
@@ -133,8 +147,6 @@ def train():
     elif args.dataset == 'WEISHI':
         if args.jpg_xml_path == '':
             parser.error('Must specify jpg_xml_path if using WEISHI')
-        if args.label_name_path == '':
-            parser.error('Must specify label_name_path if using WEISHI')
         cfg = weishi
         dataset = WeishiDetection(root=args.dataset_root, \
                                   image_xml_path=args.jpg_xml_path, label_file_path=args.label_name_path, \
@@ -156,13 +168,13 @@ def train():
         val_dataset = COCODetection(root=coco_val_dataset_root, \
                                     transform=BaseTransform(cfg['min_dim'], cfg['testset_mean'])) # 300 originally
 
-    if args.visdom:
-        import visdom
-        viz = visdom.Visdom()
-
     # network set-up
     if args.use_res:
         ssd_net = build_ssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='resnet') # for resnet
+    elif args.use_m1:
+        ssd_net = build_mssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='m1') # backbone network is m1
+    elif args.use_m2:
+        ssd_net = build_mssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='m2') # backbone network is m2
     else:
         ssd_net = build_ssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='vgg') # backbone network is vgg
     net = ssd_net
@@ -176,7 +188,7 @@ def train():
         ssd_net.load_weights(args.resume)
     else:
         print('Using preloaded base network...') # Preloaded.
-        print('Initializing weights...')
+        print('Initializing other weights...')
         # initialize newly added layers' weights with xavier method
         ssd_net.extras.apply(weights_init)
         ssd_net.loc.apply(weights_init)
@@ -185,6 +197,7 @@ def train():
     if args.cuda:
         net = net.cuda()
 
+    # training set-up
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum,
                           weight_decay=args.weight_decay)
     criterion = MultiBoxLoss(cfg['num_classes'], 0.5, True, 0, True, 3, 0.5, False, args.cuda)
@@ -202,6 +215,8 @@ def train():
     print(args)
 
     if args.visdom:
+        import visdom
+        viz = visdom.Visdom()
         vis_title = 'SSD.PyTorch on ' + dataset.name
         vis_legend = ['Loc Loss', 'Conf Loss', 'Total Loss']
         iter_plot = create_vis_plot('Iteration', 'Loss', vis_title, vis_legend)
@@ -286,9 +301,16 @@ def train():
             if args.use_res:
                 torch.save(ssd_net.state_dict(), 'weights/ssd300_resnet_' + # for resnet
                            repr(iteration) + '.pth')
+            elif args.use_m1:
+                torch.save(ssd_net.state_dict(), 'weights/ssd300_mobilev1_' +
+                           repr(iteration) + '.pth')
+            elif args.use_m2:
+                torch.save(ssd_net.state_dict(), 'weights/ssd300_mobilev2_' +
+                           repr(iteration) + '.pth')
             else:
                 torch.save(ssd_net.state_dict(), 'weights/ssd300_vgg_' +
                            repr(iteration) + '.pth')
+
     torch.save(ssd_net.state_dict(),
                args.save_folder + '' + args.dataset + '.pth')
 
@@ -343,7 +365,7 @@ def update_vis_plot(iteration, loc, conf, window1, window2, update_type,
             update=True
         )
 
-# test function for vggSSD
+# test function for SSD
 """
     Args:
         save_folder: the eval results saving folder

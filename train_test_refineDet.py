@@ -3,7 +3,6 @@
     Execute: python3 train_test_refineDet.py --evaluate True (testing while training)
     Execute: python3 train_test_refineDet.py (only training)
     Author: xuhuahuang as intern in YouTu 07/2018
-    Status: checked
 '''
 from data import * # val_dataset_root, dataset_root, Timer
 from data import VOC_CLASSES as voc_labelmap
