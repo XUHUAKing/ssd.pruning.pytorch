@@ -1,10 +1,20 @@
 from __future__ import print_function
 """
-    Model evaluation on VOC for vggSSD/resnetSSD separately
-    Execute: python3 eval_voc_vggresSSD.py --trained_model weights/_your_trained_SSD_model_.pth
+    Model evaluation on VOC for vggSSD separately
+    Execute: python3 eval_voc_vrmSSD.py --trained_model weights/_your_trained_SSD_model_.pth
+
+    Model evaluation on VOC for resnetSSD separately
+    Execute: python3 eval_voc_vrmSSD.py --use_res --trained_model weights/_your_trained_SSD_model_.pth
+
+    Model evaluation on VOC for mobileSSD v1 separately
+    Execute: python3 eval_voc_vrmSSD.py --use_m1 --trained_model weights/_your_trained_SSD_model_.pth
+
+    Model evaluation on VOC for mobileSSD v2 separately
+    Execute: python3 eval_voc_vrmSSD.py --use_m2 --trained_model weights/_your_trained_SSD_model_.pth
+
     (Take care of different versions of .pth file, can be solved by changing state_dict)
+
     Author: xuhuahuang as intern in YouTu 07/2018
-    Status: checked (vgg + resnet)
 """
 
 import torch
@@ -12,11 +22,10 @@ import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.autograd import Variable
 from data import *
-# from data import VOC_CLASSES as labelmap
-from data import XL_CLASSES as labelmap # for VOC_xlab_products dataset
 import torch.utils.data as data
 
 from models.SSD_vggres import build_ssd
+from models.SSD_mobile import build_mssd
 
 import sys
 import os
@@ -53,12 +62,19 @@ parser.add_argument('--confidence_threshold', default=0.01, type=float,
 #                    help='Further restrict the number of predictions to parse')
 parser.add_argument('--cuda', default=True, type=str2bool,
                     help='Use cuda to train model')
-# parser.add_argument('--voc_root', default= VOC_ROOT,
-#                    help='Location of VOC root directory')
-parser.add_argument('--voc_root', default= XL_ROOT,# for VOC_xlab_products dataset
+parser.add_argument('--voc_root', default= XL_ROOT,# VOC_ROOT, for VOC_xlab_products dataset
                     help='Location of XL root directory')
 parser.add_argument('--cleanup', default=True, type=str2bool,
                     help='Cleanup and remove results files following eval')
+# for resnet backbone
+parser.add_argument("--use_res", dest="use_res", action="store_true")
+parser.set_defaults(use_res=False)
+# for mobilev1 backbone
+parser.add_argument("--use_m1", dest="use_m1", action="store_true")
+parser.set_defaults(use_m1=False)
+# for mobilev2 backbone
+parser.add_argument("--use_m2", dest="use_m2", action="store_true")
+parser.set_defaults(use_m2=False)
 
 args = parser.parse_args()
 
@@ -93,7 +109,7 @@ def test_net(save_folder, net, cuda,
         os.mkdir(save_folder)
 
     num_images = len(testset)
-    num_classes = len(labelmap)                      # +1 for background
+    num_classes = cfg['num_classes']
     # all detections are collected into:
     #    all_boxes[cls][image] = N x 5 array of detections in
     #    (x1, y1, x2, y2, score)
@@ -149,9 +165,15 @@ def test_net(save_folder, net, cuda,
 
 if __name__ == '__main__':
     # load net
-    num_classes = len(labelmap)                      # +1 for background
-    net = build_ssd('test', cfg, 300, num_classes, base='vgg') # initialize SSD (vgg)
-    # net = build_ssd('test', cfg, 300, num_classes, base='resnet') # initialize SSD (resnet)
+    num_classes = cfg['num_classes']
+    if args.use_res:
+        net = build_ssd('test', cfg, 300, num_classes, base='resnet') # initialize SSD (resnet)
+    elif args.use_m1:
+        net = build_mssd('test', cfg, 300, num_classes, base='m1') # backbone network is m1
+    elif args.use_m2:
+        net = build_mssd('test', cfg, 300, num_classes, base='m2') # backbone network is m2
+    else:
+        net = build_ssd('test', cfg, 300, num_classes, base='vgg') # initialize SSD (vgg)
     # if you want to eval SSD from original version ssd.pytorch because self.vgg was changed to self.base
     '''
     # load resume SSD network
