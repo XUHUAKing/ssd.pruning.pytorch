@@ -46,7 +46,7 @@ class VGG(nn.Module):
         # no classifier for this self-designed VGG
 
     def forward(self, x):
-        return x
+        return x # pseudo
 
     def vgg_layers(self):
         layers = []
