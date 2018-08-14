@@ -5,6 +5,7 @@ from __future__ import print_function
     (Take care of different versions of .pth file, can be solved by changing state_dict)
 
     Author: xuhuahuang as intern in YouTu 07/2018
+    Status: checked
 """
 
 import torch
@@ -210,7 +211,7 @@ if __name__ == '__main__':
         net = net.cuda()
         cudnn.benchmark = True
     # evaluation
-    top_k = (300, 200)[args.dataset == 'COCO'] # for VOC_xlab_products
+    top_k = 300 # for VOC_xlab_products
     test_net(args.save_folder, net, detector, priors, args.cuda, dataset,
              BaseTransform(net.size, cfg['dataset_mean']),
              top_k, thresh=args.confidence_threshold) # 320 originally for cfg['min_dim']
