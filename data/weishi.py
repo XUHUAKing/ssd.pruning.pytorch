@@ -131,11 +131,8 @@ class WeishiDetection(data.Dataset):
             des = line.split(' ')
             self._annopath[count] = des[1]
             self._imgpath[count] = des[0]
+            self.ids.append(str(count)) # assign unique id for each image for tracking detection results later
             count = count + 1
-            tree = ET.parse(des[1]).getroot()
-            for fname in tree.findall('filename'):
-                self.ids.append(fname.text)
-                break # only one name
         fin.close()
 
     def __getitem__(self, index):
@@ -239,7 +236,7 @@ class WeishiDetection(data.Dataset):
             filename = self._get_weishi_results_file_template().format(cls)
             with open(filename, 'wt') as f:
                 for im_ind, index in enumerate(self.ids):
-                    index = index[1]
+                    index = index # not index[1]
                     dets = all_boxes[cls_ind][im_ind]
                     if dets == []:
                         continue
