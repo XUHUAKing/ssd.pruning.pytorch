@@ -13,6 +13,7 @@ A [PyTorch](http://pytorch.org/) implementation of:
 - <a href='#datasets'>Datasets</a>
 - <a href='#training-ssd'>Train</a>
 - <a href='#evaluation'>Evaluate</a>
+- <a href='#pruning and fintune'>Pruning and Finetune</a>
 - <a href='#performance'>Performance</a>
 - <a href='#demos'>Demos</a>
 - <a href='#todo'>Future Work</a>
@@ -113,6 +114,7 @@ You can specify the parameters listed in the `eval.py` file by flagging them or 
 
 
 <img align="left" src= "https://github.com/amdegroot/ssd.pytorch/blob/master/doc/detection_examples.png">
+## Pruning and Finetune
 
 ## Performance
 
