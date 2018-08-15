@@ -24,9 +24,8 @@ A [PyTorch](http://pytorch.org/) implementation of:
 &nbsp;
 
 ## Installation
-- Install [PyTorch](http://pytorch.org/) by selecting your environment on the website and running the appropriate command.
 - Clone this repository.
-  * Note: We currently only support Python 3+.
+  * Note: We currently only support Python 3+ and PyTorch 0.3.
 - Then download the dataset by following the [instructions](#datasets) below.
 - We now support [Visdom](https://github.com/facebookresearch/visdom) for real-time loss visualization during training!
   * To use Visdom in the browser:
@@ -37,10 +36,14 @@ A [PyTorch](http://pytorch.org/) implementation of:
   python -m visdom.server
   ```
   * Then (during training) navigate to http://localhost:8097/ (see the Train section below for training details).
-- Note: For training, we currently support [VOC](http://host.robots.ox.ac.uk/pascal/VOC/) and [COCO](http://mscoco.org/), and aim to add [ImageNet](http://www.image-net.org/) support soon.
+- Note: For training and evaluation, [COCO](http://mscoco.org/) is not supported yet.
 
 ## Datasets
 To make things easy, we provide bash scripts to handle the dataset downloads and setup for you.  We also provide simple dataset loaders that inherit `torch.utils.data.Dataset`, making them fully compatible with the `torchvision.datasets` [API](http://pytorch.org/docs/torchvision/datasets.html).
+
+&nbsp;
+
+Please refer to config.py file (path: ssd.pytorch.tencent/data) and remember to update dataset root if necessary. Please also note that dataset root for VALIDATION should be written within config.py, while dataset root for TRAINING can be updated through args during execution of a program. 
 
 
 ### COCO
@@ -50,6 +53,7 @@ Microsoft COCO: Common Objects in Context
 ```Shell
 # specify a directory for dataset to be downloaded into, else default is ~/data/
 sh data/scripts/COCO2014.sh
+# this dataset has existed in /cephfs/share/data/coco_xy in Tencent server
 ```
 
 ### VOC Dataset
@@ -59,14 +63,24 @@ PASCAL VOC: Visual Object Classes
 ```Shell
 # specify a directory for dataset to be downloaded into, else default is ~/data/
 sh data/scripts/VOC2007.sh # <directory>
+# this dataset has existed in /cephfs/share/data/VOCdevkit in Tencent server
 ```
 
 ##### Download VOC2012 trainval
 ```Shell
 # specify a directory for dataset to be downloaded into, else default is ~/data/
 sh data/scripts/VOC2012.sh # <directory>
+# this dataset has existed in /cephfs/share/data/VOCdevkit in Tencent server
 ```
 
+### XL Dataset
+```Shell
+# this dataset has existed in /cephfs/share/data/VOC_xlab_products in Tencent server
+```
+### WEISHI Dataset
+```shell
+# this dataset has existed in /cephfs/share/data/weishi_xh in Tencent server
+```
 ## Training SSD
 - First download the fc-reduced [VGG-16](https://arxiv.org/abs/1409.1556) PyTorch base network weights at:              https://s3.amazonaws.com/amdegroot-models/vgg16_reducedfc.pth
 - By default, we assume you have downloaded the file in the `ssd.pytorch/weights` dir:
