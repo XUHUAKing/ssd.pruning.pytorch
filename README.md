@@ -1,6 +1,10 @@
-# SSD: Single Shot MultiBox Object Detector, in PyTorch
-A [PyTorch](http://pytorch.org/) implementation of [Single Shot MultiBox Detector](http://arxiv.org/abs/1512.02325) from the 2016 paper by Wei Liu, Dragomir Anguelov, Dumitru Erhan, Christian Szegedy, Scott Reed, Cheng-Yang, and Alexander C. Berg.  The official and original Caffe code can be found [here](https://github.com/weiliu89/caffe/tree/ssd).
-
+# Improved Single Shot MultiBox Object Detector, RefineDet and Network Pruning, in PyTorch
+A [PyTorch](http://pytorch.org/) implementation of:
+- [Single Shot MultiBox Detector](http://arxiv.org/abs/1512.02325) from the 2016 paper by Wei Liu, etc.
+- Variants of SSD with Resnet-50/MobileNetv1/MobileNetv2 backbones.
+- [Single-Shot Refinement Neural Network for Object Detection](https://arxiv.org/abs/1711.06897) from the 2017 paper by Shifeng Zhang, etc.
+- [Pruning Filters for Efficient ConvNets](https://arxiv.org/abs/1608.08710) from the 2017 paper by Hao Li, etc.
+- Support model training and evaluation on various datasets including VOC/XLab/WEISHI/COCO.  
 
 <img align="right" src= "https://github.com/amdegroot/ssd.pytorch/blob/master/doc/ssd.png" height = 400/>
 
