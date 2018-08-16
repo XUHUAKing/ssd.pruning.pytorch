@@ -9,7 +9,7 @@ A [PyTorch](http://pytorch.org/) implementation of:
 ### Table of Contents
 - <a href='#installation'>Installation</a>
 - <a href='#datasets'>Datasets</a>
-- <a href='#training'>Train</a>
+- <a href='#train-and-test'>Train and Test</a>
 - <a href='#evaluation'>Evaluate</a>
 - <a href='#pruning-and-finetune'>Pruning and Finetune</a>
 - <a href='#performance'>Performance</a>
@@ -78,7 +78,7 @@ sh data/scripts/COCO2014.sh
 # this dataset has existed in /cephfs/share/data/coco_xy in Tencent server
 ```
 
-## Training
+## Train and Test
 ### Set Up
 - All required backbone weights have existed in `ssd.pytorch.tencent/weights` dir. They are modified versions of original model (Resnet-50, VGG, MobileNet v1, MobileNet v2) fitting our own model design.
 
