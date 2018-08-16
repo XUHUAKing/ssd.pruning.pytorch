@@ -177,20 +177,52 @@ For other datasets, please refer to Test part in train_test files, and extract t
 <img align="left" src= "https://github.com/amdegroot/ssd.pytorch/blob/master/doc/detection_examples.png">
 
 ## Prune and Finetune
+### Prune
 #### Following files are for maginitude-based filter pruning purpose:
 - `prune_weights_refineDet.py`
 - `prune_weights_resnetSSD.py`
 - `prune_weights_vggSSD.py`
+
+```Shell
+#Use absolute weights-based criterion for filter pruning on refineDet(vgg)
+python3 prune_weights_refineDet.py --trained_model weights/_your_trained_model_.pth
+
+#Use absolute weights-based criterion for filter pruning on vggSSD
+python3 prune_weights_vggSSD.py --trained_model weights/_your_trained_model_.pth
+
+#Use absolute weights-based criterion for filter pruning on resnetSSD (resnet50)
+python3 prune_weights_resnetSSD.py --trained_model weights/_your_trained_model_.pth
+#**Note**
+#Due to the limitation of PyTorch, if you really need to prune left path conv layer,
+#after call this file, please use prune_rbconv_by_number() MANUALLY to prune all following right bottom layers affected by your pruning
+
+```
+The way of loading trained model (first time) and fintuned model (> 2 times) are different.
+Please change the following codes within `prune_weights_**.py` files correspondingly.
+```Shell
+    # ------------------------------------------- 1st prune: load model from state_dict
+    model = build_ssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='resnet').cuda()
+    state_dict = torch.load(args.trained_model)
+    from collections import OrderedDict
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        head = k[:7] # head = k[:4]
+        if head == 'module.': # head == 'vgg.', module. is due to DataParellel
+            name = k[7:]  # name = 'base.' + k[4:]
+        else:
+            name = k
+        new_state_dict[name] = v
+    model.load_state_dict(new_state_dict)
+    #model.load_state_dict(torch.load(args.trained_model))
+    
+    # ------------------------------------------- >= 2nd prune: load model from previous pruning
+    model = torch.load(args.trained_model).cuda()
+```
+
+### Finetune
 #### Following files are for fintuning purpose after pruning/previous fintuing:
 - `finetune_vggresSSD.py`
 - `finetune_refineDet.py`
-
-### Prune
-To prune a trained network (first time):
-
-To prune a finetuned network (>2 times):
-
-### Finetune
 
 ## Performance
 
