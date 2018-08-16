@@ -6,8 +6,6 @@ A [PyTorch](http://pytorch.org/) implementation of:
 - [Pruning Filters for Efficient ConvNets](https://arxiv.org/abs/1608.08710) from the 2017 paper by Hao Li, etc.
 - Support model training and evaluation on various datasets including VOC/XLab/WEISHI/COCO.  
 
-<img align="right" src= "https://github.com/amdegroot/ssd.pytorch/blob/master/doc/ssd.png" height = 400/>
-
 ### Table of Contents
 - <a href='#installation'>Installation</a>
 - <a href='#datasets'>Datasets</a>
