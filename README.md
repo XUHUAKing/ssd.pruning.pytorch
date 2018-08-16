@@ -25,6 +25,7 @@ A [PyTorch](http://pytorch.org/) implementation of:
 ## Installation
 - Clone this repository.
   * Note: We currently only support Python 3+ and PyTorch 0.3.
+  * Note: Can directly use image in Tencent Docker `youtu/akuxcwchen_pytorch:3.0` for enviroment setup.
 - Then download the dataset by following the [instructions](#datasets) below.
 - We now support [Visdom](https://github.com/facebookresearch/visdom) for real-time loss visualization during training!
   * To use Visdom in the browser:
