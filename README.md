@@ -13,7 +13,7 @@ A [PyTorch](http://pytorch.org/) implementation of:
 - <a href='#datasets'>Datasets</a>
 - <a href='#training'>Train</a>
 - <a href='#evaluation'>Evaluate</a>
-- <a href='#pruning-and-fintune'>Pruning and Finetune</a>
+- <a href='#pruning-and-finetune'>Pruning and Finetune</a>
 - <a href='#performance'>Performance</a>
 - <a href='#demos'>Demos</a>
 - <a href='#todo'>Future Work</a>
@@ -115,11 +115,24 @@ python3 train_test_vrmSSD.py --use_m2 # only training
 #Use XL dataset
 --dataset XL --dataset_root _path_for_XL_ROOT
 ```
+### Training RefineDet (VGG)
+- To train RefineDet using the train script simply specify the parameters listed in `train_test_refineDet.py` as flag or manually change them.
+```Shell
+#Use VOC dataset by default
+#Train + Test refineDet model
+python3 train_test_refineDet.py --evaluate True #testing while training
+python3 train_test_refineDet.py #only training
 
+#Use WEISHI dataset
+--dataset WEISHI --dataset_root _path_for_WEISHI_ROOT --jpg_xml_path _path_of_your_jpg_xml
+
+#Use XL dataset
+--dataset XL --dataset_root _path_for_XL_ROOT
+```
 - Note:
   * For training, an NVIDIA GPU is strongly recommended for speed.
   * For instructions on Visdom usage/installation, see the <a href='#installation'>Installation</a> section.
-  * You can pick-up training from a checkpoint by specifying the path as one of the training parameters (again, see `train.py` for options)
+  * You can pick-up training from a checkpoint by specifying the path as one of the training parameters (again, see `--resume` for options)
 
 ## Evaluation
 To evaluate a trained network:
@@ -160,6 +173,7 @@ To prune a finetuned network (>2 times):
 ### Use a pre-trained SSD network for detection
 
 #### Download a pre-trained network
+- For other pre-trained network with different backbones on different dataset, please contact me.
 - We are trying to provide PyTorch `state_dicts` (dict of weight tensors) of the latest SSD model definitions trained on different datasets.  
 - Currently, we provide the following PyTorch models:
     * SSD300 trained on VOC0712 (newest PyTorch weights)
@@ -198,26 +212,25 @@ jupyter notebook
 - Running `python -m demo.live` opens the webcam and begins detecting!
 
 ## TODO
-We have accumulated the following to-do list, which we hope to complete in the near future
+The following to-do list, which hope to complete in the near future
 - Still to come:
+  * [ ] Fix mistake for implemenation of top_k/max_per_image
   * [ ] Support for the MS COCO dataset
-  * [ ] Support for the WEISHI dataset
   * [ ] Change backbone of refineDet to resnet
-  * [ ] Support for SSD512 training and testing
+  * [ ] Support for SSD512 and RefineDet512 training and testing
 
 ## Authors
 
-* [**Xuhua HUANG**](https://github.com/XUHUAKing)
-* [**Max deGroot**](https://github.com/amdegroot)
-* [**Ellis Brown**](http://github.com/ellisbrown)
+* [**xuhuahuang**](https://github.com/XUHUAKing) as intern in Tencent YouTu Lab 07/2018 
 
-***Note:*** Unfortunately, this is just a hobby of ours and not a full-time job, so we'll do our best to keep things up to date, but no guarantees.  That being said, thanks to everyone for your continued help and feedback as it is really appreciated. We will try to address everything as soon as possible.
+Thanks [**Max deGroot**](https://github.com/amdegroot) and [**Ellis Brown**](http://github.com/ellisbrown) because this work is built on their original implementation for SSD in pytorch.
+
 
 ## References
 - Jaco. "PyTorch Implementation of [1611.06440] Pruning Convolutional Neural Networks for Resource Efficient Inference." https://github.com/jacobgil/pytorch-pruningReferences
 - Implementation of Variants of SSD Model. https://github.com/lzx1413/PytorchSSD
+- Useful links of explanation for Mobilenet v2. http://machinethink.net/blog/mobilenet-v2/
+- Useful links of explanation for Mobilenet v1. http://machinethink.net/blog/googles-mobile-net-architecture-on-iphone/
 - Wei Liu, et al. "SSD: Single Shot MultiBox Detector." [ECCV2016]((http://arxiv.org/abs/1512.02325)).
 - [Original Implementation (CAFFE)](https://github.com/weiliu89/caffe/tree/ssd)
 - A huge thank you to [Alex Koltun](https://github.com/alexkoltun) and his team at [Webyclip](webyclip.com) for their help in finishing the data augmentation portion.
-- A list of other great SSD ports that were sources of inspiration (especially the Chainer repo):
-  * [Chainer](https://github.com/Hakuyume/chainer-ssd), [Keras](https://github.com/rykov8/ssd_keras), [MXNet](https://github.com/zhreshold/mxnet-ssd), [Tensorflow](https://github.com/balancap/SSD-Tensorflow)
