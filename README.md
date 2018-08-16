@@ -11,9 +11,9 @@ A [PyTorch](http://pytorch.org/) implementation of:
 ### Table of Contents
 - <a href='#installation'>Installation</a>
 - <a href='#datasets'>Datasets</a>
-- <a href='#training-ssd'>Train</a>
+- <a href='#training'>Train</a>
 - <a href='#evaluation'>Evaluate</a>
-- <a href='#pruning and fintune'>Pruning and Finetune</a>
+- <a href='#pruning-and-fintune'>Pruning and Finetune</a>
 - <a href='#performance'>Performance</a>
 - <a href='#demos'>Demos</a>
 - <a href='#todo'>Future Work</a>
@@ -41,8 +41,6 @@ A [PyTorch](http://pytorch.org/) implementation of:
 
 ## Datasets
 To make things easy, we provide bash scripts to handle the dataset downloads and setup for you.  We also provide simple dataset loaders that inherit `torch.utils.data.Dataset`, making them fully compatible with the `torchvision.datasets` [API](http://pytorch.org/docs/torchvision/datasets.html).
-
-&nbsp;
 
 Please refer to config.py file (path: ssd.pytorch.tencent/data) and remember to update dataset root if necessary. Please also note that dataset root for VALIDATION should be written within config.py, while dataset root for TRAINING can be updated through args during execution of a program. 
 
@@ -82,20 +80,40 @@ sh data/scripts/VOC2012.sh # <directory>
 ```shell
 # this dataset has existed in /cephfs/share/data/weishi_xh in Tencent server
 ```
-## Training SSD
-- First download the fc-reduced [VGG-16](https://arxiv.org/abs/1409.1556) PyTorch base network weights at:              https://s3.amazonaws.com/amdegroot-models/vgg16_reducedfc.pth
-- By default, we assume you have downloaded the file in the `ssd.pytorch/weights` dir:
+## Training
+### Set Up
+- All required backbone weights have existed in `ssd.pytorch.tencent/weights` dir. They are modified versions of original model (Resnet-50, VGG, MobileNet v1, MobileNet v2).
 
 ```Shell
 mkdir weights
 cd weights
-wget https://s3.amazonaws.com/amdegroot-models/vgg16_reducedfc.pth
 ```
-
+### Training SSD (Resnet/VGG/MobileNetv1/MobileNetv2)
 - To train SSD using the train script simply specify the parameters listed in `train.py` as a flag or manually change them.
 
 ```Shell
-python train.py
+#Use VOC dataset by default
+#Train + Test SSD model with vgg backbone
+python3 train_test_vrmSSD.py --evaluate True # testing while training
+python3 train_test_vrmSSD.py # only training
+
+#Train + Test SSD model with resnet backbone
+python3 train_test_vrmSSD.py --use_res --evaluate True # testing while training
+python3 train_test_vrmSSD.py --use_res # only training
+
+#Train + Test SSD model with mobilev1 backbone
+python3 train_test_vrmSSD.py --use_m1 --evaluate True # testing while training
+python3 train_test_vrmSSD.py --use_m1 # only training
+
+#Train + Test SSD model with mobilev2 backbone
+python3 train_test_vrmSSD.py --use_m2 --evaluate True # testing while training
+python3 train_test_vrmSSD.py --use_m2 # only training
+
+#Use WEISHI dataset
+--dataset WEISHI --dataset_root _path_for_WEISHI_ROOT --jpg_xml_path _path_to_your_jpg_xml_txt
+
+#Use XL dataset
+--dataset XL --dataset_root _path_for_XL_ROOT
 ```
 
 - Note:
@@ -115,6 +133,12 @@ You can specify the parameters listed in the `eval.py` file by flagging them or 
 
 <img align="left" src= "https://github.com/amdegroot/ssd.pytorch/blob/master/doc/detection_examples.png">
 ## Pruning and Finetune
+### Pruning
+To prune a trained network (first time):
+
+To prune a finetuned network (>2 times):
+
+### Finetune
 
 ## Performance
 
