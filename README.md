@@ -89,7 +89,7 @@ mkdir weights
 cd weights
 ```
 ### Training SSD (Resnet/VGG/MobileNetv1/MobileNetv2)
-- To train SSD using the train script simply specify the parameters listed in `train.py` as a flag or manually change them.
+- To train SSD using the train script simply specify the parameters listed in `train_test_vrmSSD.py` as a flag or manually change them.
 
 ```Shell
 #Use VOC dataset by default
@@ -132,7 +132,9 @@ You can specify the parameters listed in the `eval.py` file by flagging them or 
 
 
 <img align="left" src= "https://github.com/amdegroot/ssd.pytorch/blob/master/doc/detection_examples.png">
+
 ## Pruning and Finetune
+
 ### Pruning
 To prune a trained network (first time):
 
