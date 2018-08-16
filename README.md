@@ -292,7 +292,7 @@ jupyter notebook
 ## TODO
 The following to-do list, which hope to complete in the near future
 - Still to come:
-  * [ ] Fix mistake for implemenation of top_k/max_per_image
+  * [x] Fix mistake for implemenation of top_k/max_per_image
   * [ ] Support for the MS COCO dataset
   * [ ] Support for SSD512 and RefineDet512 training and testing
 
