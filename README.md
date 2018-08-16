@@ -40,7 +40,7 @@ A [PyTorch](http://pytorch.org/) implementation of:
 ## Datasets
 To make things easy, we provide bash scripts to handle the dataset downloads and setup for you.  We also provide simple dataset loaders that inherit `torch.utils.data.Dataset`, making them fully compatible with the `torchvision.datasets` [API](http://pytorch.org/docs/torchvision/datasets.html).
 
-Please refer to config.py file (path: ssd.pytorch.tencent/data) and remember to update dataset root if necessary. Please also note that dataset root for VALIDATION should be written within config.py, while dataset root for TRAINING can be updated through args during execution of a program. 
+Please refer to `config.py` file (path: ssd.pytorch.tencent/data) and remember to update dataset root if necessary. Please also note that dataset root for VALIDATION should be written within `config.py`, while dataset root for TRAINING can be updated through args during execution of a program. 
 
 
 ### COCO
