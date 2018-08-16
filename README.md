@@ -11,7 +11,7 @@ A [PyTorch](http://pytorch.org/) implementation of:
 - <a href='#datasets'>Datasets</a>
 - <a href='#train-and-test'>Train and Test</a>
 - <a href='#evaluation'>Evaluate</a>
-- <a href='#pruning-and-finetune'>Pruning and Finetune</a>
+- <a href='#prune-and-finetune'>Prune and Finetune</a>
 - <a href='#performance'>Performance</a>
 - <a href='#demos'>Demos</a>
 - <a href='#todo'>Future Work</a>
@@ -145,20 +145,40 @@ python3 train_test_refineDet.py #only training
   * You can pick-up training from a checkpoint by specifying the path as one of the training parameters (again, see `--resume` for options)
 
 ## Evaluation
-To evaluate a trained network:
-
+To evaluate a trained network or checkpoint on VOC or VOC-like dataset only.
+### Evaluate SSD (Resnet/VGG/MobileNetv1/MobileNetv2)
+Use `eval_voc_vrmSSD.py` to evaluate.
 ```Shell
-python eval.py
+#Model evaluation on VOC for vggSSD separately
+python3 eval_voc_vrmSSD.py --trained_model weights/_your_trained_SSD_model_.pth
+
+#Model evaluation on VOC for resnetSSD separately
+python3 eval_voc_vrmSSD.py --use_res --trained_model weights/_your_trained_SSD_model_.pth
+
+#Model evaluation on VOC for mobileSSD v1 separately
+python3 eval_voc_vrmSSD.py --use_m1 --trained_model weights/_your_trained_SSD_model_.pth
+
+#Model evaluation on VOC for mobileSSD v2 separately
+python3 eval_voc_vrmSSD.py --use_m2 --trained_model weights/_your_trained_SSD_model_.pth
+
+#Take care of different versions of .pth file, can be solved by changing state_dict
+```  
+### Evaluate RefineDet (VGG)
+Use `eval_voc_refineDet.py` to evaluate.
+```Shell
+#Model evaluation on VOC for refineDet separately
+python3 eval_voc_refineDet.py --trained_model weights/_your_trained_refineDet_model_.pth
+
+#Take care of different versions of .pth file, can be solved by changing state_dict
 ```
 
-You can specify the parameters listed in the `eval.py` file by flagging them or manually changing them.  
-
+For other datasets, please refer to Test part in train_test files, and extract the test_net() function.
 
 <img align="left" src= "https://github.com/amdegroot/ssd.pytorch/blob/master/doc/detection_examples.png">
 
-## Pruning and Finetune
+## Prune and Finetune
 
-### Pruning
+### Prune
 To prune a trained network (first time):
 
 To prune a finetuned network (>2 times):
