@@ -42,17 +42,6 @@ To make things easy, we provide bash scripts to handle the dataset downloads and
 
 Please refer to `config.py` file (path: ssd.pytorch.tencent/data) and remember to update dataset root if necessary. Please also note that dataset root for VALIDATION should be written within `config.py`, while dataset root for TRAINING can be updated through args during execution of a program. 
 
-
-### COCO
-Microsoft COCO: Common Objects in Context
-
-##### Download COCO 2014
-```Shell
-# specify a directory for dataset to be downloaded into, else default is ~/data/
-sh data/scripts/COCO2014.sh
-# this dataset has existed in /cephfs/share/data/coco_xy in Tencent server
-```
-
 ### VOC Dataset
 PASCAL VOC: Visual Object Classes
 
@@ -78,6 +67,17 @@ sh data/scripts/VOC2012.sh # <directory>
 ```shell
 # this dataset has existed in /cephfs/share/data/weishi_xh in Tencent server
 ```
+
+### COCO
+Microsoft COCO: Common Objects in Context
+
+##### Download COCO 2014
+```Shell
+# specify a directory for dataset to be downloaded into, else default is ~/data/
+sh data/scripts/COCO2014.sh
+# this dataset has existed in /cephfs/share/data/coco_xy in Tencent server
+```
+
 ## Training
 ### Set Up
 - All required backbone weights have existed in `ssd.pytorch.tencent/weights` dir. They are modified versions of original model (Resnet-50, VGG, MobileNet v1, MobileNet v2) fitting our own model design.
