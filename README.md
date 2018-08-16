@@ -91,10 +91,10 @@ mkdir weights
 cd weights
 ```
 - To make backbone preloading more convenient, we turn all backbone models into class object inheriting `nn.Module` in PyTorch. 
- * Resnet: `ssd.pytorch.tencent/models/resnet.py`
- * VGG for SSD + RefineDet: `ssd.pytorch.tencent/models/vgg.py`
- * MobileNet v1: `ssd.pytorch.tencent/models/mobilenetv1.py`
- * MobileNet v2: `ssd.pytorch.tencent/models/mobilenetv2.py`
+  * Resnet: `ssd.pytorch.tencent/models/resnet.py`
+  * VGG for SSD + RefineDet: `ssd.pytorch.tencent/models/vgg.py`
+  * MobileNet v1: `ssd.pytorch.tencent/models/mobilenetv1.py`
+  * MobileNet v2: `ssd.pytorch.tencent/models/mobilenetv2.py`
  
 Based on this design, all backbone layers returned by functions in `backbones.py` have already stored pretrained weights.
 
