@@ -80,9 +80,10 @@ sh data/scripts/VOC2012.sh # <directory>
 ```
 ## Training
 ### Set Up
-- All required backbone weights have existed in `ssd.pytorch.tencent/weights` dir. They are modified versions of original model (Resnet-50, VGG, MobileNet v1, MobileNet v2).
+- All required backbone weights have existed in `ssd.pytorch.tencent/weights` dir. They are modified versions of original model (Resnet-50, VGG, MobileNet v1, MobileNet v2) fitting our own model design.
 
 ```Shell
+# navigate them by:
 mkdir weights
 cd weights
 ```
