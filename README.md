@@ -79,7 +79,7 @@ sh data/scripts/COCO2014.sh
 ```
 
 ## Train and Test
-### Set Up
+### Model Set-up
 - All required backbone weights have existed in `ssd.pytorch.tencent/weights` dir. They are modified versions of original model (Resnet-50, VGG, MobileNet v1, MobileNet v2) fitting our own model design.
 
 ```Shell
@@ -87,6 +87,14 @@ sh data/scripts/COCO2014.sh
 mkdir weights
 cd weights
 ```
+- To make backbone preloading more convenient, we turn all backbone models into class object inheriting `nn.Module` in PyTorch. 
+ * Resnet: `ssd.pytorch.tencent/models/resnet.py`
+ * VGG for SSD + RefineDet: `ssd.pytorch.tencent/models/vgg.py`
+ * MobileNet v1: `ssd.pytorch.tencent/models/mobilenetv1.py`
+ * MobileNet v2: `ssd.pytorch.tencent/models/mobilenetv2.py`
+ 
+Based on this design, all backbone layers returned by functions in `backbones.py` have already stored pretrained weights.
+
 ### Training SSD (Resnet/VGG/MobileNetv1/MobileNetv2)
 - To train SSD using the train script simply specify the parameters listed in `train_test_vrmSSD.py` as a flag or manually change them.
 
