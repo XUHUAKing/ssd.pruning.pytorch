@@ -172,7 +172,7 @@ python3 eval_voc_refineDet.py --trained_model weights/_your_trained_refineDet_mo
 #Take care of different versions of .pth file, can be solved by changing state_dict
 ```
 
-For other datasets, please refer to Test part in train_test files, and extract the test_net() function.
+For other datasets, please refer to Test part in train_test files, and extract the test_net() function correspondingly.
 
 <img align="left" src= "https://github.com/amdegroot/ssd.pytorch/blob/master/doc/detection_examples.png">
 
