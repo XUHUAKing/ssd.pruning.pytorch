@@ -51,8 +51,9 @@ parser.add_argument('--save_folder', default='eval/', type=str,
                     help='File path to save results')
 parser.add_argument('--confidence_threshold', default=0.01, type=float,
                     help='Detection confidence threshold')
-#parser.add_argument('--top_k', default=300, type=int,
-#                    help='Further restrict the number of predictions to parse')
+# 200 in SSD paper, 200 for COCO, 300 for VOC
+parser.add_argument('--max_per_image', default=200, type=int,
+                    help='Top number of detections kept per image, further restrict the number of predictions to parse')
 parser.add_argument('--cuda', default=True, type=str2bool,
                     help='Use cuda to train model')
 parser.add_argument('--voc_root', default=VOC_ROOT, #XL_ROOT, for VOC_xlab_products dataset
@@ -94,7 +95,7 @@ detector = RefineDetect(cfg['num_classes'], 0, cfg, object_score=0.01)
         max_per_image/top_k： The Maximum number of box preds to consider
 """
 def test_net(save_folder, net, detector, priors, cuda,
-             testset, transform, max_per_image=300, thresh=0.05): # max_per_image is same as top_k
+             testset, transform, max_per_image=200, thresh=0.05):
 
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
@@ -211,7 +212,6 @@ if __name__ == '__main__':
         net = net.cuda()
         cudnn.benchmark = True
     # evaluation
-    top_k = 300 # for VOC_xlab_products
     test_net(args.save_folder, net, detector, priors, args.cuda, dataset,
              BaseTransform(net.size, cfg['dataset_mean']),
-             top_k, thresh=args.confidence_threshold) # 320 originally for cfg['min_dim']
+             args.max_per_image, thresh=args.confidence_threshold) # 320 originally for cfg['min_dim']

@@ -59,8 +59,9 @@ parser.add_argument('--save_folder', default='eval/', type=str,
                     help='File path to save results')
 parser.add_argument('--confidence_threshold', default=0.01, type=float,
                     help='Detection confidence threshold')
-#parser.add_argument('--top_k', default=5, type=int,
-#                    help='Further restrict the number of predictions to parse')
+# 200 in SSD paper, 200 for COCO, 300 for VOC
+parser.add_argument('--max_per_image', default=200, type=int,
+                    help='Top number of detections kept per image, further restrict the number of predictions to parse')
 parser.add_argument('--cuda', default=True, type=str2bool,
                     help='Use cuda to train model')
 parser.add_argument('--voc_root', default= VOC_ROOT,# XL_ROOT, for VOC_xlab_products dataset
@@ -168,13 +169,13 @@ if __name__ == '__main__':
     # load net
     num_classes = cfg['num_classes']
     if args.use_res:
-        net = build_ssd('test', cfg, 300, num_classes, base='resnet') # initialize SSD (resnet)
+        net = build_ssd('test', cfg, 300, num_classes, base='resnet', max_per_image = args.max_per_image) # initialize SSD (resnet)
     elif args.use_m1:
-        net = build_mssd('test', cfg, 300, num_classes, base='m1') # backbone network is m1
+        net = build_mssd('test', cfg, 300, num_classes, base='m1', max_per_image = args.max_per_image) # backbone network is m1
     elif args.use_m2:
-        net = build_mssd('test', cfg, 300, num_classes, base='m2') # backbone network is m2
+        net = build_mssd('test', cfg, 300, num_classes, base='m2', max_per_image = args.max_per_image) # backbone network is m2
     else:
-        net = build_ssd('test', cfg, 300, num_classes, base='vgg') # initialize SSD (vgg)
+        net = build_ssd('test', cfg, 300, num_classes, base='vgg', max_per_image = args.max_per_image) # initialize SSD (vgg)
     # if you want to eval SSD from original version ssd.pytorch because self.vgg was changed to self.base
     '''
     # load resume SSD network
@@ -205,7 +206,6 @@ if __name__ == '__main__':
         net = net.cuda()
         cudnn.benchmark = True
     # evaluation
-    top_k = 300 # for VOC_xlab_products
     test_net(args.save_folder, net, args.cuda, dataset,
-             BaseTransform(net.size, cfg['dataset_mean']), top_k,
+             BaseTransform(net.size, cfg['dataset_mean']), args.max_per_image,
              thresh=args.confidence_threshold)

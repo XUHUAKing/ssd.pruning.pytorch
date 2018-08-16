@@ -79,8 +79,9 @@ parser.add_argument('--eval_folder', default='evals/',
                     help='Directory for saving eval results')
 parser.add_argument('--confidence_threshold', default=0.01, type=float,
                     help='Detection confidence threshold')
-#parser.add_argument('--top_k', default=5, type=int,
-#                    help='Further restrict the number of predictions to parse')
+# 200 in SSD paper, 200 for COCO, 300 for VOC
+parser.add_argument('--max_per_image', default=200, type=int,
+                    help='Top number of detections kept per image, further restrict the number of predictions to parse')
 # for WEISHI dataset
 parser.add_argument('--jpg_xml_path', default='',
                     help='Image XML mapping path')
@@ -248,10 +249,9 @@ def train():
             if args.evaluate == True:
                 # load net
                 net.eval()
-                top_k = (300, 200)[args.dataset == 'COCO']# for VOC_xlab_products
                 APs,mAP = test_net(args.eval_folder, net, detector, priors, args.cuda, val_dataset,
                          BaseTransform(net.module.size, cfg['testset_mean']),
-                         top_k, thresh=args.confidence_threshold) # 320 originally for cfg['min_dim']
+                         args.max_per_image, thresh=args.confidence_threshold) # 320 originally for cfg['min_dim']
                 net.train()
             epoch += 1
 
@@ -395,7 +395,7 @@ def update_vis_plot(iteration, loc, conf, window1, window2, update_type,
                    because it pull_image instead of pull_item (this will transform for you)
 """
 def test_net(save_folder, net, detector, priors, cuda,
-             testset, transform, max_per_image=300, thresh=0.05): # max_per_image is same as top_k
+             testset, transform, max_per_image=200, thresh=0.05): # max_per_image is same as top_k
 
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)

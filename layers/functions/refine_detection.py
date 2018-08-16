@@ -4,6 +4,8 @@ from ..box_utils import decode, center_size
 
 # The Detect() class for RefineDet is named RefineDetect.
 # It excludes the nms process from itself.
+# for RefineDet, top_k or max_per_image is used in test_net because nms is outside RefineDetect()
+# while for normal SSD, it is initialized in SSD object
 class RefineDetect(Function):
     """At test time, Detect is the final layer of SSD.  Decode location preds,
     apply non-maximum suppression to location predictions based on conf

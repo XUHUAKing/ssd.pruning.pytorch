@@ -48,6 +48,9 @@ parser.add_argument("--lr", default=0.001, type=float)
 parser.add_argument("--momentum", default=0.9, type=float)
 parser.add_argument("--epoch", default=20, type=int)
 parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to train model')
+# for test_net: 200 in SSD paper, 200 for COCO, 300 for VOC
+parser.add_argument('--max_per_image', default=200, type=int,
+                    help='Top number of detections kept per image, further restrict the number of predictions to parse')
 # use resnet or not
 parser.add_argument("--use_res", dest="use_res", action="store_true")
 parser.set_defaults(use_res=False)
@@ -56,7 +59,7 @@ args = parser.parse_args()
 cfg = voc
 
 def test_net(save_folder, net, cuda,
-             testset, transform, max_per_image=300, thresh=0.05):
+             testset, transform, max_per_image=200, thresh=0.05):
 
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
@@ -83,7 +86,7 @@ def test_net(save_folder, net, cuda,
             x = x.cuda()
 
         _t['im_detect'].tic()
-        detections = net(x=x, test=True).data # get the detection results
+        detections = net(x=x, test=True).data # get the detection results, max_per_image = 300 takes effect inside
         detect_time = _t['im_detect'].toc(average=False) #store the detection time
 
         # skip j = 0, because it's the background class
@@ -133,7 +136,7 @@ class FineTuner_vggresSSD:
         # evaluation
         map = test_net('prunes/test', self.model, args.cuda, testset,
                  BaseTransform(self.model.size, cfg['dataset_mean']),
-                 300, thresh=0.01)
+                 args.max_per_image, thresh=0.01)
 
         self.model.train()
         return map

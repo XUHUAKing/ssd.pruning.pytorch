@@ -24,9 +24,10 @@ class SSD_MobN1(nn.Module):
         base: MobileNet v1 layers for input, size of either 300 or 500
         extras: extra layers that feed to multibox loc and conf layers
         head: "multibox head" consists of loc and conf conv layers
+        max_per_image: same as top_k, used in Detection, keep 200 detections per image by default
     """
 
-    def __init__(self, phase, size, base, extras, head, num_classes, cfg):
+    def __init__(self, phase, size, base, extras, head, num_classes, cfg, max_per_image):
         super(SSD_MobN1, self).__init__()
         self.phase = phase
         self.num_classes = num_classes
@@ -47,8 +48,7 @@ class SSD_MobN1(nn.Module):
 
         #if phase == 'test':
         self.softmax = nn.Softmax(dim=-1)
-        # top_k = (300, 200)[args.dataset == 'COCO'], 200 here is top_k
-        self.detect = Detect(num_classes, 0, self.cfg, 200, 0.01, 0.45)
+        self.detect = Detect(num_classes, 0, self.cfg, max_per_image, 0.01, 0.45)
 
     def forward(self, x, test=False):
         """Applies network layers and ops on input image(s) x.
@@ -130,7 +130,7 @@ class SSD_MobN2(nn.Module):
     added multibox conv layers.  Each multibox layer branches into
     """
 
-    def __init__(self, phase, size, base, extras, head, num_classes, cfg):
+    def __init__(self, phase, size, base, extras, head, num_classes, cfg, max_per_image):
         super(SSD_MobN2, self).__init__()
         self.phase = phase
         self.num_classes = num_classes
@@ -151,7 +151,7 @@ class SSD_MobN2(nn.Module):
 
         #if phase == 'test':
         self.softmax = nn.Softmax(dim=-1)
-        self.detect = Detect(num_classes, 0, self.cfg, 200, 0.01, 0.45)
+        self.detect = Detect(num_classes, 0, self.cfg, max_per_image, 0.01, 0.45)
 
     def forward(self, x, test=False):
         """Applies network layers and ops on input image(s) x.
@@ -275,7 +275,7 @@ mbox = {
     '512': [],
 }
 
-def build_mssd(phase, cfg, size=300, num_classes=21, base='m1', width_mult = 1.):
+def build_mssd(phase, cfg, size=300, num_classes=21, base='m1', max_per_image = 200, width_mult = 1.):
     if phase != "test" and phase != "train":
         print("ERROR: Phase: " + phase + " not recognized")
         return
@@ -288,9 +288,9 @@ def build_mssd(phase, cfg, size=300, num_classes=21, base='m1', width_mult = 1.)
         base_, extras_, head_ = mob2_multibox(mobilenetv2(width_mult),
                                          add_extras(extras[str(size)], int(1280 * width_mult) if width_mult > 1.0 else 1280),
                                          mbox[str(size)], num_classes)
-        return SSD_MobN2(phase, size, base_, extras_, head_, num_classes, cfg)
+        return SSD_MobN2(phase, size, base_, extras_, head_, num_classes, cfg, max_per_image)
     else:
         base_, extras_, head_ = mob1_multibox(mobilenetv1(),
                                          add_extras(extras[str(size)], 1024),
                                          mbox[str(size)], num_classes)
-        return SSD_MobN1(phase, size, base_, extras_, head_, num_classes, cfg)
+        return SSD_MobN1(phase, size, base_, extras_, head_, num_classes, cfg, max_per_image)

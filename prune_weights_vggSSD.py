@@ -43,12 +43,15 @@ parser.add_argument("--trained_model", default = "prunes/vggSSD_trained.pth")
 parser.add_argument('--dataset_root', default=VOC_ROOT)
 parser.add_argument("--cut_ratio", default=0.2, type=float)
 parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to train model')
+#for test_net 200 in SSD paper, 200 for COCO, 300 for VOC
+parser.add_argument('--max_per_image', default=200, type=int,
+                    help='Top number of detections kept per image, further restrict the number of predictions to parse')
 args = parser.parse_args()
 
 cfg = voc
 
 def test_net(save_folder, net, cuda,
-             testset, transform, max_per_image=300, thresh=0.05):
+             testset, transform, max_per_image=200, thresh=0.05):
 
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
@@ -122,7 +125,7 @@ class Prunner_vggSSD:
         # evaluation
         test_net('prunes/test', self.model, args.cuda, testset,
                  BaseTransform(self.model.size, cfg['dataset_mean']),
-                 300, thresh=0.01)
+                 args.max_per_image, thresh=0.01)
 
         self.model.train()
 
@@ -162,7 +165,7 @@ if __name__ == '__main__':
         os.mkdir(args.prune_folder)
 
     # ------------------------------------------- 1st prune: load model from state_dict
-    model = build_ssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='vgg').cuda()
+    model = build_ssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='vgg', max_per_image = args.max_per_image).cuda()
     state_dict = torch.load(args.trained_model)
     from collections import OrderedDict
     new_state_dict = OrderedDict()

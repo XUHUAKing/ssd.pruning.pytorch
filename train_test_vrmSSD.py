@@ -90,8 +90,9 @@ parser.add_argument('--eval_folder', default='evals/',
                     help='Directory for saving eval results')
 parser.add_argument('--confidence_threshold', default=0.01, type=float,
                     help='Detection confidence threshold')
-#parser.add_argument('--top_k', default=5, type=int,
-#                    help='Further restrict the number of predictions to parse')
+# 200 in SSD paper, 200 for COCO, 300 for VOC
+parser.add_argument('--max_per_image', default=200, type=int,
+                    help='Top number of detections kept per image, further restrict the number of predictions to parse')
 # for WEISHI dataset
 parser.add_argument('--jpg_xml_path', default='', #'/cephfs/share/data/weishi_xh/train_58_0713.txt'
                     help='Image XML mapping path')
@@ -169,13 +170,13 @@ elif args.dataset == 'COCO':
 def train():
     # network set-up
     if args.use_res:
-        ssd_net = build_ssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='resnet') # for resnet
+        ssd_net = build_ssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='resnet', max_per_image = args.max_per_image) # for resnet
     elif args.use_m1:
-        ssd_net = build_mssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='m1') # backbone network is m1
+        ssd_net = build_mssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='m1', max_per_image = args.max_per_image) # backbone network is m1
     elif args.use_m2:
-        ssd_net = build_mssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='m2') # backbone network is m2
+        ssd_net = build_mssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='m2', max_per_image = args.max_per_image) # backbone network is m2
     else:
-        ssd_net = build_ssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='vgg') # backbone network is vgg
+        ssd_net = build_ssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='vgg', max_per_image = args.max_per_image) # backbone network is vgg
     net = ssd_net
 
     if args.cuda:
@@ -254,10 +255,9 @@ def train():
             if args.evaluate == True:
                 # load net
                 net.eval()
-                top_k = (300, 200)[args.dataset == 'COCO'] # for VOC_xlab_products
                 APs,mAP = test_net(args.eval_folder, net, args.cuda, val_dataset,
                          BaseTransform(net.module.size, cfg['testset_mean']),
-                         top_k, thresh=args.confidence_threshold) # 300 is for cfg['min_dim'] originally
+                         args.max_per_image, thresh=args.confidence_threshold) # 300 is for cfg['min_dim'] originally
                 net.train()
             epoch += 1
 
@@ -374,7 +374,7 @@ def update_vis_plot(iteration, loc, conf, window1, window2, update_type,
         max_per_image/top_k：The Maximum number of box preds to consider
 """
 def test_net(save_folder, net, cuda,
-             testset, transform, max_per_image=300, thresh=0.05):
+             testset, transform, max_per_image=200, thresh=0.05):
 
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)

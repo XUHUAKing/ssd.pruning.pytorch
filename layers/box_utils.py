@@ -228,14 +228,14 @@ def log_sum_exp(x):
 # Original author: Francisco Massa:
 # https://github.com/fmassa/object-detection.torch
 # Ported to PyTorch by Max deGroot (02/01/2017)
-def nms(boxes, scores, overlap=0.5, top_k=300): # for VOC, top_k = 300, for COCO, top_k = 200
+def nms(boxes, scores, overlap=0.5, max_per_image=200): # for VOC, top_k = 300, for COCO, top_k = 200
     """Apply non-maximum suppression at test time to avoid detecting too many
     overlapping bounding boxes for a given object.
     Args:
         boxes: (tensor) The location preds for the img, Shape: [num_priors,4].
         scores: (tensor) The class predscores for the img, Shape:[num_priors].
         overlap: (float) The overlap thresh for suppressing unnecessary boxes.
-        top_k: (int) The Maximum number of box preds to consider.
+        max_per_image/top_k: (int) The Maximum number of box preds to consider.
     Return:
         The indices of the kept boxes with respect to num_priors.
     """
@@ -250,7 +250,7 @@ def nms(boxes, scores, overlap=0.5, top_k=300): # for VOC, top_k = 300, for COCO
     area = torch.mul(x2 - x1, y2 - y1)
     v, idx = scores.sort(0)  # sort in ascending order
     # I = I[v >= 0.01]
-    idx = idx[-top_k:]  # indices of the top-k largest vals
+    idx = idx[-max_per_image:]  # indices of the top-k largest vals
     xx1 = boxes.new()
     yy1 = boxes.new()
     xx2 = boxes.new()

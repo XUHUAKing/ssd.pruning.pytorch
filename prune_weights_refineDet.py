@@ -45,6 +45,9 @@ parser.add_argument("--trained_model", default = "prunes/refineDet_trained.pth")
 parser.add_argument('--dataset_root', default=VOC_ROOT)
 parser.add_argument("--cut_ratio", default=0.2, type=float)
 parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to train model')
+#for test_net: 200 in SSD paper, 200 for COCO, 300 for VOC
+parser.add_argument('--max_per_image', default=200, type=int,
+                    help='Top number of detections kept per image, further restrict the number of predictions to parse')
 args = parser.parse_args()
 
 cfg = voc320
@@ -55,7 +58,7 @@ priors = Variable(priorbox.forward().cuda(), volatile=True) # set the priors to 
 detector = RefineDetect(cfg['num_classes'], 0, cfg, object_score=0.01)
 
 def test_net(save_folder, net, detector, priors, cuda,
-             testset, transform, max_per_image=300, thresh=0.05): # max_per_image is same as top_k
+             testset, transform, max_per_image=200, thresh=0.05): # max_per_image is same as top_k
 
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
@@ -151,7 +154,7 @@ class Prunner_refineDet:
         # evaluation
         test_net('prunes/test', self.model, detector, priors, args.cuda, testset,
                  BaseTransform(self.model.size, cfg['dataset_mean']),
-                 300, thresh=0.01)
+                 args.max_per_image, thresh=0.01)
 
         self.model.train()
 

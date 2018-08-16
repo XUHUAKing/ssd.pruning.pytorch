@@ -7,13 +7,13 @@ class Detect(Function):
     """
     At test time, Detect is the final layer of SSD.  Decode location preds,
     apply non-maximum suppression to location predictions based on conf
-    scores and threshold to a top_k number of output predictions for both
+    scores and threshold to a top_k/max_per_image number of output predictions for both
     confidence score and locations.
     """
-    def __init__(self, num_classes, bkg_label, cfg, top_k, conf_thresh, nms_thresh):
+    def __init__(self, num_classes, bkg_label, cfg, max_per_image, conf_thresh, nms_thresh):
         self.num_classes = num_classes
         self.background_label = bkg_label
-        self.top_k = top_k
+        self.max_per_image = max_per_image
         # Parameters used in nms.
         self.nms_thresh = nms_thresh
         if nms_thresh <= 0:
@@ -34,7 +34,7 @@ class Detect(Function):
         num = loc_data.size(0)  # batch size
         num_priors = prior_data.size(0)
         # top_k is 200 by default, num is 1 when testing because image input one by one
-        output = torch.zeros(num, self.num_classes, self.top_k, 5)
+        output = torch.zeros(num, self.num_classes, self.max_per_image, 5)
         # for each sample, every prior box will have #num_classes conf. scores for it
         conf_preds = conf_data.view(num, num_priors,
                                     self.num_classes).transpose(2, 1)
@@ -59,12 +59,13 @@ class Detect(Function):
                 boxes = decoded_boxes[l_mask].view(-1, 4)
                 #step 2. use NMS to remove redundant boxes bounding the same class's object
                 # idx of highest scoring and non-overlapping boxes per class
-                ids, count = nms(boxes, scores, self.nms_thresh, self.top_k)
+                ids, count = nms(boxes, scores, self.nms_thresh, self.max_per_image)
                 output[i, cl, :count] = \
                     torch.cat((scores[ids[:count]].unsqueeze(1),
                                boxes[ids[:count]]), 1)
         flt = output.contiguous().view(num, -1, 5)
         _, idx = flt[:, :, 0].sort(1, descending=True)
         _, rank = idx.sort(1)
-        flt[(rank < self.top_k).unsqueeze(-1).expand_as(flt)].fill_(0) # this code has no effect
-        return output # pointer
+        flt[(rank < self.max_per_image).unsqueeze(-1).expand_as(flt)].fill_(0) # this code has no effect
+        return output # before
+        #return flt # after

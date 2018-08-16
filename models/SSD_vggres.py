@@ -26,7 +26,7 @@ class SSD_VGG(nn.Module):
         head: "multibox head" consists of loc and conf conv layers
     """
 
-    def __init__(self, phase, size, base, extras, head, num_classes, cfg):
+    def __init__(self, phase, size, base, extras, head, num_classes, cfg, max_per_image):
         super(SSD_VGG, self).__init__()
         self.phase = phase
         self.num_classes = num_classes
@@ -47,8 +47,7 @@ class SSD_VGG(nn.Module):
 
         #if phase == 'test':
         self.softmax = nn.Softmax(dim=-1)
-        # top_k = (300, 200)[args.dataset == 'COCO'], 200 here is top_k
-        self.detect = Detect(num_classes, 0, self.cfg, 200, 0.01, 0.45)
+        self.detect = Detect(num_classes, 0, self.cfg, max_per_image, 0.01, 0.45)
 
     def forward(self, x, test=False):
         """Applies network layers and ops on input image(s) x.
@@ -133,7 +132,7 @@ class SSD_RESNET(nn.Module):
     added multibox conv layers.
     """
 
-    def __init__(self, phase, size, base, extras, head, num_classes, cfg):
+    def __init__(self, phase, size, base, extras, head, num_classes, cfg, max_per_image):
         super(SSD_RESNET, self).__init__()
         self.phase = phase
         self.num_classes = num_classes
@@ -154,7 +153,7 @@ class SSD_RESNET(nn.Module):
 
         #if phase == 'test':
         self.softmax = nn.Softmax(dim=-1)
-        self.detect = Detect(num_classes, 0, self.cfg, 200, 0.01, 0.45)
+        self.detect = Detect(num_classes, 0, self.cfg, max_per_image, 0.01, 0.45)
 
     def forward(self, x, test=False):
         """Applies network layers and ops on input image(s) x.
@@ -279,7 +278,7 @@ mbox = {
 }
 
 
-def build_ssd(phase, cfg, size=300, num_classes=21, base='vgg'):
+def build_ssd(phase, cfg, size=300, num_classes=21, base='vgg', max_per_image = 200):
     if phase != "test" and phase != "train":
         print("ERROR: Phase: " + phase + " not recognized")
         return
@@ -292,9 +291,9 @@ def build_ssd(phase, cfg, size=300, num_classes=21, base='vgg'):
         base_, extras_, head_ = resnet_multibox(resnet(),
                                          add_extras(extras[str(size)], 2048),
                                          mbox[str(size)], num_classes)
-        return SSD_RESNET(phase, size, base_, extras_, head_, num_classes, cfg)
+        return SSD_RESNET(phase, size, base_, extras_, head_, num_classes, cfg, max_per_image)
     else:
         base_, extras_, head_ = vgg_multibox(vgg(),
                                          add_extras(extras[str(size)], 1024),
                                          mbox[str(size)], num_classes)
-        return SSD_VGG(phase, size, base_, extras_, head_, num_classes, cfg)
+        return SSD_VGG(phase, size, base_, extras_, head_, num_classes, cfg, max_per_image)
