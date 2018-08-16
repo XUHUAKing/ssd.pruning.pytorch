@@ -25,7 +25,7 @@ A [PyTorch](http://pytorch.org/) implementation of:
 ## Installation
 - Clone this repository.
   * Note: We currently only support Python 3+ and PyTorch 0.3.
-  * Note: Can directly use image in Tencent Docker `youtu/akuxcwchen_pytorch:3.0` for enviroment setup.
+  * Note: Can directly use image in Tencent Docker `youtu/akuxcwchen_pytorch:3.0` for environment setup.
 - Then download the dataset by following the [instructions](#datasets) below.
 - We now support [Visdom](https://github.com/facebookresearch/visdom) for real-time loss visualization during training!
   * To use Visdom in the browser:
@@ -61,15 +61,17 @@ sh data/scripts/VOC2012.sh # <directory>
 ```
 
 ### XL Dataset
+This dataset is VOC-like dataset produced by X-Lab
 ```Shell
 # this dataset has existed in /cephfs/share/data/VOC_xlab_products in Tencent server
 ```
 ### WEISHI Dataset
+This dataset has an one-to-one matching format inside a jpg-xml file. 
 ```shell
 # this dataset has existed in /cephfs/share/data/weishi_xh in Tencent server
 ```
 
-### COCO
+### COCO (Not supported now but can refer to pycocotools API)
 Microsoft COCO: Common Objects in Context
 
 ##### Download COCO 2014
