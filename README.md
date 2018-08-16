@@ -197,33 +197,42 @@ python3 prune_weights_resnetSSD.py --trained_model weights/_your_trained_model_.
 #after call this file, please use prune_rbconv_by_number() MANUALLY to prune all following right bottom layers affected by your pruning
 
 ```
-The way of loading trained model (first time) and fintuned model (> 2 times) are different.
+The way of loading trained model (first time) and finetuned model (> 2 times) are different.
 Please change the following codes within `prune_weights_**.py` files correspondingly.
 ```Shell
-    # ------------------------------------------- 1st prune: load model from state_dict
-    model = build_ssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='resnet').cuda()
-    state_dict = torch.load(args.trained_model)
-    from collections import OrderedDict
-    new_state_dict = OrderedDict()
-    for k, v in state_dict.items():
-        head = k[:7] # head = k[:4]
-        if head == 'module.': # head == 'vgg.', module. is due to DataParellel
-            name = k[7:]  # name = 'base.' + k[4:]
-        else:
-            name = k
-        new_state_dict[name] = v
-    model.load_state_dict(new_state_dict)
-    #model.load_state_dict(torch.load(args.trained_model))
-    
-    # ------------------------------------------- >= 2nd prune: load model from previous pruning
-    model = torch.load(args.trained_model).cuda()
+# ------------------------------------------- 1st prune: load model from state_dict
+model = build_ssd('train', cfg, cfg['min_dim'], cfg['num_classes'], base='resnet').cuda()
+state_dict = torch.load(args.trained_model)
+from collections import OrderedDict
+new_state_dict = OrderedDict()
+for k, v in state_dict.items():
+    head = k[:7] # head = k[:4]
+    if head == 'module.': # head == 'vgg.', module. is due to DataParellel
+        name = k[7:]  # name = 'base.' + k[4:]
+    else:
+        name = k
+    new_state_dict[name] = v
+model.load_state_dict(new_state_dict)
+#model.load_state_dict(torch.load(args.trained_model))
+
+# ------------------------------------------- >= 2nd prune: load model from previous pruning
+model = torch.load(args.trained_model).cuda()
 ```
 
 ### Finetune
-#### Following files are for fintuning purpose after pruning/previous fintuing:
+#### Following files are for fintuning purpose after pruning/previous finetuing:
 - `finetune_vggresSSD.py`
 - `finetune_refineDet.py`
+```Shell
+#Finetune prunned model vggSSD (Train/Test on VOC)
+python3 finetune_vggresSSD.py --pruned_model prunes/_your_prunned_model_ --lr x --epoch y
 
+#Finetune prunned model resnetSSD (Train/Test on VOC)
+python3 finetune_vggresSSD.py --use_res --pruned_model prunes/_your_prunned_model_ --lr x --epoch y
+    
+#Finetune prunned model refineDet(vgg) (Train/Test on VOC)
+python3 finetune_refineDet.py --pruned_model prunes/_your_prunned_model --lr x --epoch y
+```
 ## Performance
 
 #### VOC2007 Test
