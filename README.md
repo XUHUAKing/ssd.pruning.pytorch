@@ -177,11 +177,11 @@ For other datasets, please refer to Test part in train_test files, and extract t
 <img align="left" src= "https://github.com/amdegroot/ssd.pytorch/blob/master/doc/detection_examples.png">
 
 ## Prune and Finetune
-Following files are for maginitude-based filter pruning purpose:
+#### Following files are for maginitude-based filter pruning purpose:
 - `prune_weights_refineDet.py`
 - `prune_weights_resnetSSD.py`
 - `prune_weights_vggSSD.py`
-Following files are for fintuning purpose after pruning/previous fintuing:
+#### Following files are for fintuning purpose after pruning/previous fintuing:
 - `finetune_vggresSSD.py`
 - `finetune_refineDet.py`
 
