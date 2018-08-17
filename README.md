@@ -293,6 +293,7 @@ jupyter notebook
 The following to-do list, which hope to complete in the near future
 - Still to come:
   * [x] Fix mistake for implemenation of top_k/max_per_image
+  * [ ] Fix learning rate to 0.98 decay every epoch and 1/10 when mAP is stable
   * [ ] Support for the MS COCO dataset
   * [ ] Support for SSD512 and RefineDet512 training and testing
 
